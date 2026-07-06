@@ -1,0 +1,120 @@
+@import "tailwindcss";
+
+/* Clinical Clarity design tokens, sourced from the Claude Design project
+   "Pharmacy E-Commerce Website" (see CLAUDE.md). Primary: Royal Blue ·
+   Secondary: Teal · Tertiary: Ice Blue · Neutral: Slate. */
+:root {
+  --color-primary-50: #eff4ff;
+  --color-primary-100: #dbe6ff;
+  --color-primary-200: #bed2ff;
+  --color-primary-300: #91b2ff;
+  --color-primary-400: #5c86ff;
+  --color-primary-500: #0f52ff;
+  --color-primary-600: #0a42db;
+  --color-primary-700: #0833b0;
+  --color-primary-800: #0a2e8c;
+  --color-primary-900: #0d2b6b;
+
+  --color-secondary-50: #effcfa;
+  --color-secondary-100: #c9f5ee;
+  --color-secondary-200: #97ebe0;
+  --color-secondary-300: #5ad9cb;
+  --color-secondary-400: #2bbfb2;
+  --color-secondary-500: #0d9488;
+  --color-secondary-600: #0a7a70;
+  --color-secondary-700: #0c615a;
+  --color-secondary-800: #0d4e49;
+  --color-secondary-900: #0e403d;
+
+  --color-tertiary-50: #f8fcff;
+  --color-tertiary-100: #f0f9ff;
+  --color-tertiary-200: #e0f2fe;
+  --color-tertiary-300: #bae6fd;
+
+  --color-neutral-50: #f8fafc;
+  --color-neutral-100: #f1f5f9;
+  --color-neutral-200: #e2e8f0;
+  --color-neutral-300: #cbd5e1;
+  --color-neutral-400: #94a3b8;
+  --color-neutral-500: #64748b;
+  --color-neutral-600: #475569;
+  --color-neutral-700: #334155;
+  --color-neutral-800: #1e293b;
+  --color-neutral-900: #0f172a;
+
+  --color-success-50: #ecfdf5;
+  --color-success-500: #16a34a;
+  --color-success-600: #15803d;
+  --color-warning-50: #fffbeb;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-danger-50: #fef2f2;
+  --color-danger-500: #dc2626;
+  --color-danger-600: #b91c1c;
+
+  --background: var(--color-neutral-50);
+  --foreground: var(--color-neutral-900);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-primary-50: var(--color-primary-50);
+  --color-primary-100: var(--color-primary-100);
+  --color-primary-200: var(--color-primary-200);
+  --color-primary-300: var(--color-primary-300);
+  --color-primary-400: var(--color-primary-400);
+  --color-primary-500: var(--color-primary-500);
+  --color-primary-600: var(--color-primary-600);
+  --color-primary-700: var(--color-primary-700);
+  --color-primary-800: var(--color-primary-800);
+  --color-primary-900: var(--color-primary-900);
+
+  --color-secondary-50: var(--color-secondary-50);
+  --color-secondary-100: var(--color-secondary-100);
+  --color-secondary-200: var(--color-secondary-200);
+  --color-secondary-300: var(--color-secondary-300);
+  --color-secondary-400: var(--color-secondary-400);
+  --color-secondary-500: var(--color-secondary-500);
+  --color-secondary-600: var(--color-secondary-600);
+  --color-secondary-700: var(--color-secondary-700);
+  --color-secondary-800: var(--color-secondary-800);
+  --color-secondary-900: var(--color-secondary-900);
+
+  --color-tertiary-50: var(--color-tertiary-50);
+  --color-tertiary-100: var(--color-tertiary-100);
+  --color-tertiary-200: var(--color-tertiary-200);
+  --color-tertiary-300: var(--color-tertiary-300);
+
+  --color-neutral-50: var(--color-neutral-50);
+  --color-neutral-100: var(--color-neutral-100);
+  --color-neutral-200: var(--color-neutral-200);
+  --color-neutral-300: var(--color-neutral-300);
+  --color-neutral-400: var(--color-neutral-400);
+  --color-neutral-500: var(--color-neutral-500);
+  --color-neutral-600: var(--color-neutral-600);
+  --color-neutral-700: var(--color-neutral-700);
+  --color-neutral-800: var(--color-neutral-800);
+  --color-neutral-900: var(--color-neutral-900);
+
+  --color-success-50: var(--color-success-50);
+  --color-success-500: var(--color-success-500);
+  --color-success-600: var(--color-success-600);
+  --color-warning-50: var(--color-warning-50);
+  --color-warning-500: var(--color-warning-500);
+  --color-warning-600: var(--color-warning-600);
+  --color-danger-50: var(--color-danger-50);
+  --color-danger-500: var(--color-danger-500);
+  --color-danger-600: var(--color-danger-600);
+
+  --font-headline: var(--font-public-sans);
+  --font-body: var(--font-inter);
+  --font-sans: var(--font-inter);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body), Arial, Helvetica, sans-serif;
+}
