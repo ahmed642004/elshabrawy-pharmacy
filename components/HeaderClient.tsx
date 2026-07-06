@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Search, MapPin, User, ShoppingCart, Menu, X, LogOut } from "lucide-react";
+import { Plus, Search, MapPin, User, ShoppingCart, Menu, X, LogOut, Pill, LayoutDashboard, Package } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { useCart } from "@/lib/cart-context";
 import { createClient } from "@/lib/supabase/client";
+import { formatEGP } from "@/lib/cart-totals";
 
 const NAV_LINKS = [
   { label: "Skincare", href: "/category/skincare" },
@@ -20,13 +21,166 @@ const NAV_LINKS = [
 export interface HeaderUser {
   email: string;
   fullName: string | null;
+  isAdmin: boolean;
+}
+
+interface LiveResult {
+  slug: string;
+  name: string;
+  brand: string | null;
+  price: number;
+  imageUrl?: string;
+}
+
+const LIVE_SEARCH_LIMIT = 6;
+const LIVE_SEARCH_DEBOUNCE_MS = 250;
+
+interface LiveSearchDropdownProps {
+  open: boolean;
+  loading: boolean;
+  results: LiveResult[];
+  query: string;
+  onClose: () => void;
+  onSeeAll: () => void;
+}
+
+function LiveSearchDropdown({ open, loading, results, query, onClose, onSeeAll }: LiveSearchDropdownProps) {
+  if (!open) return null;
+  return (
+    <>
+      <button
+        type="button"
+        aria-label="Close search results"
+        onClick={onClose}
+        className="fixed inset-0 z-40 cursor-default"
+      />
+      <div className="absolute inset-x-0 top-full z-50 mt-2 max-h-[360px] overflow-y-auto rounded-[14px] border border-neutral-200 bg-white p-2 shadow-lg">
+        {loading ? (
+          <div className="px-3 py-4 text-center text-sm text-neutral-500">Searching…</div>
+        ) : results.length > 0 ? (
+          <>
+            {results.map((r) => (
+              <Link
+                key={r.slug}
+                href={`/product/${r.slug}`}
+                onClick={onClose}
+                className="flex items-center gap-3 rounded-[10px] px-2 py-2 hover:bg-neutral-50"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-neutral-100">
+                  {r.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={r.imageUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <Pill className="h-5 w-5 text-neutral-300" strokeWidth={1.5} />
+                  )}
+                </span>
+                <span className="min-w-0 flex-1">
+                  {r.brand && (
+                    <span className="block text-[11px] font-semibold tracking-wide text-neutral-400 uppercase">
+                      {r.brand}
+                    </span>
+                  )}
+                  <span className="block truncate text-sm font-semibold text-neutral-900">{r.name}</span>
+                </span>
+                <span className="shrink-0 font-headline text-sm font-bold text-neutral-900">
+                  {formatEGP(r.price)}
+                </span>
+              </Link>
+            ))}
+            <button
+              type="button"
+              onClick={onSeeAll}
+              className="mt-1 block w-full rounded-[10px] px-2 py-2 text-center text-[13px] font-semibold text-primary-500 hover:bg-primary-50"
+            >
+              See all results for “{query.trim()}”
+            </button>
+          </>
+        ) : (
+          <div className="px-3 py-4 text-center text-sm text-neutral-500">No products found</div>
+        )}
+      </div>
+    </>
+  );
 }
 
 export default function HeaderClient({ user }: { user: HeaderUser | null }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [liveOpen, setLiveOpen] = useState(false);
+  const [liveLoading, setLiveLoading] = useState(false);
+  const [liveResults, setLiveResults] = useState<LiveResult[]>([]);
+  const searchQueryRef = useRef(searchQuery);
   const { itemCount } = useCart();
+
+  useEffect(() => {
+    searchQueryRef.current = searchQuery;
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q) {
+      // Clearing the input should hide the dropdown immediately, not wait
+      // for a debounce cycle — this is a direct sync of internal state to
+      // the current input value, not a subscription to an external system.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLiveResults([]);
+      setLiveLoading(false);
+      setLiveOpen(false);
+      return;
+    }
+
+    setLiveOpen(true);
+    setLiveLoading(true);
+
+    const timer = setTimeout(async () => {
+      const supabase = createClient();
+      const escaped = q.replace(/[%_]/g, (c) => `\\${c}`);
+      const pattern = `%${escaped}%`;
+      const { data, error } = await supabase
+        .from("products")
+        .select("slug, name, brand, price, product_images(url, position)")
+        .or(`name.ilike.${pattern},brand.ilike.${pattern},sub.ilike.${pattern}`)
+        .limit(LIVE_SEARCH_LIMIT);
+
+      if (searchQueryRef.current.trim() !== q) return; // stale response, a newer query is in flight
+
+      if (!error && data) {
+        setLiveResults(
+          data.map((row) => ({
+            slug: row.slug,
+            name: row.name,
+            brand: row.brand,
+            price: Number(row.price),
+            imageUrl: (row.product_images ?? [])
+              .slice()
+              .sort((a, b) => a.position - b.position)[0]?.url,
+          }))
+        );
+      }
+      setLiveLoading(false);
+    }, LIVE_SEARCH_DEBOUNCE_MS);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  function closeLiveSearch() {
+    setLiveOpen(false);
+  }
+
+  function goToFullResults() {
+    const q = searchQuery.trim();
+    if (!q) return;
+    closeLiveSearch();
+    setMenuOpen(false);
+    router.push(`/search?q=${encodeURIComponent(q)}`);
+  }
+
+  function handleSearchSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    goToFullResults();
+  }
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -51,16 +205,20 @@ export default function HeaderClient({ user }: { user: HeaderUser | null }) {
             </span>
           </Link>
 
-          <div className="max-w-[480px] flex-1">
+          <form onSubmit={handleSearchSubmit} className="relative max-w-[480px] flex-1">
             <div className="flex h-11 items-center gap-2 rounded-full border border-neutral-300 bg-white px-4">
               <Search className="h-[18px] w-[18px] shrink-0 text-neutral-400" />
               <input
                 type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => searchQuery.trim() && setLiveOpen(true)}
                 placeholder="Search medicines, brands, health needs…"
                 className="h-full w-full min-w-0 border-none bg-transparent font-body text-sm text-neutral-900 outline-none placeholder:text-neutral-400"
               />
             </div>
-          </div>
+            <LiveSearchDropdown open={liveOpen} loading={liveLoading} results={liveResults} query={searchQuery} onClose={closeLiveSearch} onSeeAll={goToFullResults} />
+          </form>
 
           <div className="ml-auto flex shrink-0 items-center gap-4">
             <span className="flex items-center gap-1.5 whitespace-nowrap text-[13px] text-neutral-500">
@@ -94,6 +252,22 @@ export default function HeaderClient({ user }: { user: HeaderUser | null }) {
                         </div>
                         <div className="truncate text-xs text-neutral-500">{user.email}</div>
                       </div>
+                      <Link
+                        href="/account/orders"
+                        onClick={() => setAccountMenuOpen(false)}
+                        className="flex w-full items-center gap-2 rounded-[10px] px-2 py-2 text-left text-[13.5px] font-semibold text-neutral-700 hover:bg-neutral-50"
+                      >
+                        <Package className="h-4 w-4" /> My orders
+                      </Link>
+                      {user.isAdmin && (
+                        <Link
+                          href="/admin"
+                          onClick={() => setAccountMenuOpen(false)}
+                          className="flex w-full items-center gap-2 rounded-[10px] px-2 py-2 text-left text-[13.5px] font-semibold text-neutral-700 hover:bg-neutral-50"
+                        >
+                          <LayoutDashboard className="h-4 w-4" /> Ops dashboard
+                        </Link>
+                      )}
                       <button
                         type="button"
                         onClick={handleSignOut}
@@ -174,14 +348,18 @@ export default function HeaderClient({ user }: { user: HeaderUser | null }) {
             )}
           </Link>
         </div>
-        <div className="flex h-11 items-center gap-2 rounded-full border border-neutral-300 bg-white px-4">
+        <form onSubmit={handleSearchSubmit} className="relative flex h-11 items-center gap-2 rounded-full border border-neutral-300 bg-white px-4">
           <Search className="h-[18px] w-[18px] shrink-0 text-neutral-400" />
           <input
             type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => searchQuery.trim() && setLiveOpen(true)}
             placeholder="Search medicines, brands…"
             className="h-full w-full min-w-0 border-none bg-transparent font-body text-sm text-neutral-900 outline-none placeholder:text-neutral-400"
           />
-        </div>
+          <LiveSearchDropdown open={liveOpen} loading={liveLoading} results={liveResults} query={searchQuery} onClose={closeLiveSearch} onSeeAll={goToFullResults} />
+        </form>
       </header>
 
       {/* Mobile menu drawer */}
@@ -218,6 +396,18 @@ export default function HeaderClient({ user }: { user: HeaderUser | null }) {
                   </div>
                   <div className="truncate text-xs text-neutral-500">{user.email}</div>
                 </div>
+                <Link href="/account/orders" onClick={() => setMenuOpen(false)}>
+                  <Button variant="outlined" size="lg" fullWidth>
+                    <Package className="h-[18px] w-[18px]" /> My orders
+                  </Button>
+                </Link>
+                {user.isAdmin && (
+                  <Link href="/admin" onClick={() => setMenuOpen(false)}>
+                    <Button variant="outlined" size="lg" fullWidth>
+                      <LayoutDashboard className="h-[18px] w-[18px]" /> Ops dashboard
+                    </Button>
+                  </Link>
+                )}
                 <Button variant="outlined" size="lg" fullWidth onClick={handleSignOut}>
                   <LogOut className="h-[18px] w-[18px]" /> Sign out
                 </Button>

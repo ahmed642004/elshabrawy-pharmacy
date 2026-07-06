@@ -190,7 +190,12 @@ export default function CheckoutClient({ addresses }: { addresses: Address[] }) 
               <div className="font-headline text-base font-extrabold text-neutral-900">Within 2 hours</div>
             </div>
           </div>
-          <Button variant="primary" size="lg" className="mt-2.5 min-w-[220px]" onClick={() => router.push("/")}>
+          <Button
+            variant="primary"
+            size="lg"
+            className="mt-2.5 min-w-[220px]"
+            onClick={() => router.push("/account/orders")}
+          >
             Track your order
           </Button>
           <Link href="/" className="text-[13.5px] font-semibold text-neutral-500">

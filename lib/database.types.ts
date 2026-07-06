@@ -50,6 +50,38 @@ export type Database = {
         }
         Relationships: []
       }
+      cart_items: {
+        Row: {
+          product_slug: string
+          qty: number
+          saved_for_later: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          product_slug: string
+          qty: number
+          saved_for_later?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          product_slug?: string
+          qty?: number
+          saved_for_later?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cart_items_product_slug_fkey"
+            columns: ["product_slug"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
       categories: {
         Row: {
           id: string
@@ -189,12 +221,15 @@ export type Database = {
           id: string
           ingredients: string | null
           is_popular: boolean
+          low_stock_threshold: number
           name: string
           price: number
           rating: number | null
           review_count: number
+          sku: string | null
           slug: string
           stock: Database["public"]["Enums"]["stock_state"]
+          stock_count: number
           storage: string | null
           sub: string | null
           warnings: string | null
@@ -211,12 +246,15 @@ export type Database = {
           id?: string
           ingredients?: string | null
           is_popular?: boolean
+          low_stock_threshold?: number
           name: string
           price: number
           rating?: number | null
           review_count?: number
+          sku?: string | null
           slug: string
           stock?: Database["public"]["Enums"]["stock_state"]
+          stock_count?: number
           storage?: string | null
           sub?: string | null
           warnings?: string | null
@@ -233,12 +271,15 @@ export type Database = {
           id?: string
           ingredients?: string | null
           is_popular?: boolean
+          low_stock_threshold?: number
           name?: string
           price?: number
           rating?: number | null
           review_count?: number
+          sku?: string | null
           slug?: string
           stock?: Database["public"]["Enums"]["stock_state"]
+          stock_count?: number
           storage?: string | null
           sub?: string | null
           warnings?: string | null
@@ -259,18 +300,21 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          is_admin: boolean
           phone: string | null
         }
         Insert: {
           created_at?: string
           full_name?: string | null
           id: string
+          is_admin?: boolean
           phone?: string | null
         }
         Update: {
           created_at?: string
           full_name?: string | null
           id?: string
+          is_admin?: boolean
           phone?: string | null
         }
         Relationships: []
@@ -315,6 +359,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      adjust_product_stock: {
+        Args: { p_delta: number; p_product_id: string }
+        Returns: undefined
+      }
       create_order: {
         Args: {
           p_delivery_fee: number
@@ -327,6 +375,14 @@ export type Database = {
         }
         Returns: string
       }
+      get_distinct_brands: {
+        Args: never
+        Returns: {
+          brand: string
+        }[]
+      }
+      is_admin: { Args: never; Returns: boolean }
+      replace_cart: { Args: { p_items: Json }; Returns: undefined }
     }
     Enums: {
       badge_tone: "sale" | "bestseller" | "new"
