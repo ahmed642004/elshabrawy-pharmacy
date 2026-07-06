@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import Button from "@/components/ui/Button";
 import { getCategoryVisual, type CategoryTone } from "@/lib/categories";
 import { getCategories } from "@/lib/queries";
 
@@ -19,9 +18,12 @@ export default async function CategoryGrid() {
         <h2 className="m-0 font-headline text-xl font-extrabold tracking-tight text-neutral-900 md:text-2xl">
           Shop by category
         </h2>
-        <Button variant="ghost" size="sm">
+        <Link
+          href="/category"
+          className="inline-flex h-9 items-center justify-center gap-2 rounded-[10px] bg-transparent px-3 text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-100"
+        >
           All categories <ArrowRight className="h-[15px] w-[15px]" />
-        </Button>
+        </Link>
       </div>
 
       <div className="grid grid-cols-2 gap-3.5 md:grid-cols-3 lg:grid-cols-6">

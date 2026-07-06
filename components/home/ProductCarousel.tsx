@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import Button from "@/components/ui/Button";
 import ProductCard, { type Product } from "@/components/ProductCard";
 
 export default function ProductCarousel({ products }: { products: Product[] }) {
+  const router = useRouter();
   const trackRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -42,7 +44,7 @@ export default function ProductCarousel({ products }: { products: Product[] }) {
           Popular right now
         </h2>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm">
+          <Button variant="ghost" size="sm" onClick={() => router.push("/category")}>
             View all <ArrowRight className="h-[15px] w-[15px]" />
           </Button>
           <button

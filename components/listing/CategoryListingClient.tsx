@@ -53,11 +53,18 @@ export default function CategoryListingClient({
       if (value === null) params.delete(key);
       else params.set(key, value);
     }
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }
 
   function setCategories(values: string[]) {
-    replaceParams({ cat: values.join(",") });
+    const params = new URLSearchParams(searchParams.toString());
+    if (values.length) params.set("cat", values.join(","));
+    else params.delete("cat");
+
+    const targetPath = pathname === "/category" || pathname.startsWith("/category/") ? "/category" : pathname;
+    const qs = params.toString();
+    router.replace(qs ? `${targetPath}?${qs}` : targetPath, { scroll: false });
   }
 
   function setBrands(values: string[]) {
@@ -82,7 +89,14 @@ export default function CategoryListingClient({
   const activeFilterCount = selectedCategories.length + selectedBrands.length + selectedPriceRanges.length;
 
   function clearFilters() {
-    replaceParams({ cat: "", brand: null, price: null });
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("cat");
+    params.delete("brand");
+    params.delete("price");
+
+    const targetPath = pathname === "/category" || pathname.startsWith("/category/") ? "/category" : pathname;
+    const qs = params.toString();
+    router.replace(qs ? `${targetPath}?${qs}` : targetPath, { scroll: false });
   }
 
   const filterGroupsProps = {
