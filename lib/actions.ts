@@ -67,6 +67,101 @@ export async function saveAddress(input: SaveAddressInput): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Account page (/account) mutations — owner-only, enforced by the existing
+// profiles/addresses RLS policies; each still checks getUser() itself rather
+// than trusting the caller, same as saveAddress().
+// ---------------------------------------------------------------------------
+
+export async function updateProfile(input: { fullName: string; phone: string }): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not signed in");
+
+  const fullName = input.fullName.trim();
+  const phone = input.phone.trim();
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ full_name: fullName || null, phone: phone || null })
+    .eq("id", user.id);
+  if (error) throw error;
+
+  // Header reads full_name from the auth user's metadata (not profiles), so
+  // both copies must move together or the avatar/dropdown would show the old
+  // name until the next sign-in.
+  const { error: authError } = await supabase.auth.updateUser({
+    data: { full_name: fullName, phone },
+  });
+  if (authError) throw authError;
+
+  revalidatePath("/account");
+}
+
+interface AddressInput {
+  recipient: string;
+  phone: string;
+  street: string;
+  city: string;
+}
+
+export async function updateAddress(id: string, input: AddressInput): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not signed in");
+
+  const { error } = await supabase
+    .from("addresses")
+    .update({ recipient: input.recipient, phone: input.phone, street: input.street, city: input.city })
+    .eq("id", id)
+    .eq("user_id", user.id);
+  if (error) throw error;
+
+  revalidatePath("/account");
+}
+
+export async function deleteAddress(id: string): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not signed in");
+
+  const { error } = await supabase.from("addresses").delete().eq("id", id).eq("user_id", user.id);
+  if (error) throw error;
+
+  revalidatePath("/account");
+}
+
+export async function setDefaultAddress(id: string): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not signed in");
+
+  // Two statements, not atomic — worst case under concurrent clicks is two
+  // rows briefly flagged default, and checkout only reads the first anyway.
+  const { error: clearError } = await supabase
+    .from("addresses")
+    .update({ is_default: false })
+    .eq("user_id", user.id);
+  if (clearError) throw clearError;
+
+  const { error } = await supabase
+    .from("addresses")
+    .update({ is_default: true })
+    .eq("id", id)
+    .eq("user_id", user.id);
+  if (error) throw error;
+
+  revalidatePath("/account");
+}
+
+// ---------------------------------------------------------------------------
 // Pharmacy Ops Dashboard (/admin) mutations. Each re-checks admin status
 // server-side before writing — RLS is the real backstop, but this gives a
 // clean "Not authorized" error instead of a raw RLS-denial bubbling up,

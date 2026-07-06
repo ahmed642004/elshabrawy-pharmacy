@@ -253,6 +253,13 @@ export default function HeaderClient({ user }: { user: HeaderUser | null }) {
                         <div className="truncate text-xs text-neutral-500">{user.email}</div>
                       </div>
                       <Link
+                        href="/account"
+                        onClick={() => setAccountMenuOpen(false)}
+                        className="flex w-full items-center gap-2 rounded-[10px] px-2 py-2 text-left text-[13.5px] font-semibold text-neutral-700 hover:bg-neutral-50"
+                      >
+                        <User className="h-4 w-4" /> My account
+                      </Link>
+                      <Link
                         href="/account/orders"
                         onClick={() => setAccountMenuOpen(false)}
                         className="flex w-full items-center gap-2 rounded-[10px] px-2 py-2 text-left text-[13.5px] font-semibold text-neutral-700 hover:bg-neutral-50"
@@ -396,6 +403,11 @@ export default function HeaderClient({ user }: { user: HeaderUser | null }) {
                   </div>
                   <div className="truncate text-xs text-neutral-500">{user.email}</div>
                 </div>
+                <Link href="/account" onClick={() => setMenuOpen(false)}>
+                  <Button variant="outlined" size="lg" fullWidth>
+                    <User className="h-[18px] w-[18px]" /> My account
+                  </Button>
+                </Link>
                 <Link href="/account/orders" onClick={() => setMenuOpen(false)}>
                   <Button variant="outlined" size="lg" fullWidth>
                     <Package className="h-[18px] w-[18px]" /> My orders

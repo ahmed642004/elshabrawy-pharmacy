@@ -398,6 +398,59 @@ export async function getAdminInventory(): Promise<AdminInventoryItem[]> {
   });
 }
 
+export interface AccountAddress {
+  id: string;
+  recipient: string;
+  phone: string;
+  street: string;
+  city: string;
+  isDefault: boolean;
+}
+
+export interface AccountData {
+  isLoggedIn: boolean;
+  email: string;
+  fullName: string;
+  phone: string;
+  addresses: AccountAddress[];
+}
+
+// Everything the /account page needs in one fetch: the profile row plus the
+// raw address fields (unlike getAddresses(), which pre-formats them for
+// checkout's read-only radio cards — this page edits them).
+export async function getAccountData(): Promise<AccountData> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { isLoggedIn: false, email: "", fullName: "", phone: "", addresses: [] };
+
+  const [{ data: profile }, { data: addresses, error }] = await Promise.all([
+    supabase.from("profiles").select("full_name, phone").eq("id", user.id).maybeSingle(),
+    supabase
+      .from("addresses")
+      .select("id, recipient, phone, street, city, is_default")
+      .order("is_default", { ascending: false })
+      .order("created_at"),
+  ]);
+  if (error) throw error;
+
+  return {
+    isLoggedIn: true,
+    email: user.email ?? "",
+    fullName: profile?.full_name ?? "",
+    phone: profile?.phone ?? "",
+    addresses: (addresses ?? []).map((row) => ({
+      id: row.id,
+      recipient: row.recipient ?? "",
+      phone: row.phone ?? "",
+      street: row.street ?? "",
+      city: row.city ?? "",
+      isDefault: row.is_default,
+    })),
+  };
+}
+
 // "Today" means the pharmacy's local (Africa/Cairo) calendar day, not the
 // server's — counting the (small) profiles table in JS avoids computing the
 // Cairo-midnight boundary as a UTC timestamptz range.
