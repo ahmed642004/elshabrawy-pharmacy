@@ -1,20 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ChevronRight, ChevronDown, SlidersHorizontal, SearchX, X } from "lucide-react";
 import Button from "@/components/ui/Button";
 import ProductCard from "@/components/ProductCard";
-import FilterGroups, { type PriceRange } from "@/components/listing/FilterGroups";
+import FilterGroups from "@/components/listing/FilterGroups";
+import { PRICE_RANGES } from "@/lib/price-ranges";
 import type { ListingProduct, CategoryRow } from "@/lib/queries";
-
-const PRICE_RANGES: (PriceRange & { test: (price: number) => boolean })[] = [
-  { id: "r1", label: "Under EGP 100", test: (p) => p < 100 },
-  { id: "r2", label: "EGP 100 – 300", test: (p) => p >= 100 && p <= 300 },
-  { id: "r3", label: "EGP 300 – 600", test: (p) => p > 300 && p <= 600 },
-  { id: "r4", label: "Over EGP 600", test: (p) => p > 600 },
-];
 
 const SORT_OPTIONS = [
   { id: "recommended", label: "Recommended" },
@@ -35,20 +29,17 @@ export default function CategoryListingClient({
   initialCategoryId,
   products,
   categories,
+  brands,
 }: {
   initialCategoryId?: string;
   products: ListingProduct[];
   categories: CategoryRow[];
+  brands: string[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
-
-  const BRANDS = useMemo(
-    () => Array.from(new Set(products.map((p) => p.brand).filter((b): b is string => Boolean(b)))).sort(),
-    [products]
-  );
 
   const catParam = searchParams.get("cat");
   const selectedCategories = catParam !== null ? parseArrayParam(catParam) : initialCategoryId ? [initialCategoryId] : [];
@@ -81,33 +72,13 @@ export default function CategoryListingClient({
     replaceParams({ sort: value === "recommended" ? null : value });
   }
 
-  const categoriesKey = selectedCategories.join(",");
-  const brandsKey = selectedBrands.join(",");
-  const priceRangesKey = selectedPriceRanges.join(",");
-
-  const filtered = useMemo(() => {
-    let list = products.filter((p) => {
-      if (selectedCategories.length && !selectedCategories.includes(p.category)) return false;
-      if (selectedBrands.length && (!p.brand || !selectedBrands.includes(p.brand))) return false;
-      if (selectedPriceRanges.length) {
-        const matches = selectedPriceRanges.some((rid) => PRICE_RANGES.find((r) => r.id === rid)!.test(p.price));
-        if (!matches) return false;
-      }
-      return true;
-    });
-
-    if (sortBy === "price-asc") list = [...list].sort((a, b) => a.price - b.price);
-    else if (sortBy === "price-desc") list = [...list].sort((a, b) => b.price - a.price);
-    else if (sortBy === "name-asc") list = [...list].sort((a, b) => a.name.localeCompare(b.name));
-
-    return list;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [products, categoriesKey, brandsKey, priceRangesKey, sortBy]);
-
+  // Filtering/sorting already happened server-side (getFilteredProducts) based
+  // on these same URL params, so `products` here is already the exact result
+  // set — no client-side re-filtering needed.
   const activeCategory =
     selectedCategories.length === 1 ? categories.find((c) => c.id === selectedCategories[0]) : undefined;
   const pageTitle = activeCategory ? activeCategory.label : "All products";
-  const resultCountLabel = `${filtered.length} product${filtered.length === 1 ? "" : "s"}`;
+  const resultCountLabel = `${products.length} product${products.length === 1 ? "" : "s"}`;
   const activeFilterCount = selectedCategories.length + selectedBrands.length + selectedPriceRanges.length;
 
   function clearFilters() {
@@ -121,7 +92,7 @@ export default function CategoryListingClient({
     priceRanges: PRICE_RANGES,
     selectedPriceRanges,
     onTogglePrice: (id: string) => setPriceRanges(toggleInArray(selectedPriceRanges, id)),
-    brands: BRANDS,
+    brands,
     selectedBrands,
     onToggleBrand: (brand: string) => setBrands(toggleInArray(selectedBrands, brand)),
     onClear: clearFilters,
@@ -181,9 +152,9 @@ export default function CategoryListingClient({
         </aside>
 
         <div>
-          {filtered.length > 0 ? (
+          {products.length > 0 ? (
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((p) => (
+              {products.map((p) => (
                 <ProductCard key={p.slug} product={p} />
               ))}
             </div>
@@ -227,7 +198,7 @@ export default function CategoryListingClient({
                 Clear all
               </Button>
               <Button variant="primary" size="lg" className="flex-1" onClick={() => setFilterSheetOpen(false)}>
-                Show {filtered.length} results
+                Show {products.length} results
               </Button>
             </div>
           </div>
