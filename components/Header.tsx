@@ -7,8 +7,18 @@ export default async function Header() {
     data: { user },
   } = await supabase.auth.getUser();
 
+  let isAdmin = false;
+  if (user) {
+    const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).maybeSingle();
+    isAdmin = profile?.is_admin ?? false;
+  }
+
   const headerUser: HeaderUser | null = user
-    ? { email: user.email ?? "", fullName: (user.user_metadata?.full_name as string | undefined) ?? null }
+    ? {
+        email: user.email ?? "",
+        fullName: (user.user_metadata?.full_name as string | undefined) ?? null,
+        isAdmin,
+      }
     : null;
 
   return <HeaderClient user={headerUser} />;

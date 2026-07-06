@@ -45,7 +45,13 @@ function AuthForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
-  const redirectTo = searchParams.get("redirect") || "/";
+  // Only allow same-origin path redirects — a raw router.push() of the query
+  // param would let /auth?redirect=https://evil.com (or //evil.com) send a
+  // freshly signed-in user to an external site (open redirect).
+  const rawRedirect = searchParams.get("redirect") || "/";
+  const redirectTo = rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") && !rawRedirect.startsWith("/\\")
+    ? rawRedirect
+    : "/";
 
   const [view, setView] = useState<View>("signin");
   const [loading, setLoading] = useState(false);
