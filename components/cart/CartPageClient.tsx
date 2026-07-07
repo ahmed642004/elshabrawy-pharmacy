@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronRight, ShoppingCart } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import { useCart, type CartItem } from "@/lib/cart-context";
 import { getCartTotals, formatEGP } from "@/lib/cart-totals";
@@ -12,6 +13,8 @@ import OrderSummary from "@/components/cart/OrderSummary";
 
 export default function CartPageClient() {
   const router = useRouter();
+  const t = useTranslations("cart");
+  const tListing = useTranslations("listing");
   const { items, savedItems, addItem, removeItem, moveToCart, promoApplied } = useCart();
   const [toast, setToast] = useState<CartItem | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -48,13 +51,13 @@ export default function CartPageClient() {
       <div>
         <div className="mb-2 flex items-center gap-1.5 text-[13px] text-neutral-500">
           <Link href="/" className="hover:text-neutral-700">
-            Home
+            {tListing("breadcrumbHome")}
           </Link>
-          <ChevronRight className="h-3.5 w-3.5" />
-          <span className="font-semibold text-neutral-900">Your cart</span>
+          <ChevronRight className="h-3.5 w-3.5 rtl:rotate-180" />
+          <span className="font-semibold text-neutral-900">{t("title")}</span>
         </div>
         <h1 className="m-0 font-headline text-2xl font-extrabold tracking-tight text-neutral-900 md:text-[30px]">
-          Your cart
+          {t("title")}
         </h1>
       </div>
 
@@ -63,12 +66,10 @@ export default function CartPageClient() {
           <span className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-tertiary-100">
             <ShoppingCart className="h-[34px] w-[34px] text-primary-500" />
           </span>
-          <div className="font-headline text-xl font-extrabold text-neutral-900">Your cart is empty</div>
-          <div className="max-w-[320px] text-sm text-neutral-500">
-            Looks like you haven&apos;t added anything yet. Let&apos;s find what you need.
-          </div>
+          <div className="font-headline text-xl font-extrabold text-neutral-900">{t("empty")}</div>
+          <div className="max-w-[320px] text-sm text-neutral-500">{t("emptyHint")}</div>
           <Button variant="primary" size="lg" onClick={() => router.push("/")}>
-            Browse products
+            {t("browse")}
           </Button>
         </div>
       ) : (
@@ -81,7 +82,7 @@ export default function CartPageClient() {
             {savedItems.length > 0 && (
               <div className="mt-2">
                 <div className="mb-3 font-headline text-[15px] font-bold text-neutral-900">
-                  Saved for later ({savedItems.length})
+                  {t("savedForLater", { count: savedItems.length })}
                 </div>
                 {savedItems.map((s) => (
                   <div key={s.slug} className="flex items-center gap-3.5 border-t border-neutral-200 py-3.5">
@@ -93,7 +94,7 @@ export default function CartPageClient() {
                       <div className="text-[12.5px] text-neutral-500">{formatEGP(s.price)}</div>
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => moveToCart(s.slug)}>
-                      Move to cart
+                      {t("moveToCart")}
                     </Button>
                   </div>
                 ))}
@@ -110,13 +111,13 @@ export default function CartPageClient() {
       {items.length > 0 && (
         <div className="fixed right-0 bottom-0 left-0 z-[35] flex items-center gap-3 border-t border-neutral-200 bg-white px-4 py-3 shadow-[0_-4px_12px_rgba(15,23,42,0.08)] md:hidden">
           <div className="min-w-0">
-            <div className="text-[11.5px] text-neutral-500">Total</div>
+            <div className="text-[11.5px] text-neutral-500">{t("total")}</div>
             <div className="font-headline text-lg font-black whitespace-nowrap text-neutral-900">
               {formatEGP(total)}
             </div>
           </div>
           <Button variant="primary" size="lg" fullWidth className="flex-1" onClick={() => router.push("/checkout")}>
-            Proceed to checkout
+            {t("proceed")}
           </Button>
         </div>
       )}
@@ -124,9 +125,9 @@ export default function CartPageClient() {
       {toast && (
         <div className="fixed bottom-24 left-1/2 z-[80] -translate-x-1/2 md:bottom-6">
           <div className="flex items-center gap-3.5 rounded-[10px] bg-neutral-800 px-4 py-3 text-[13.5px] whitespace-nowrap text-white shadow-lg">
-            <span>&quot;{toast.name}&quot; removed</span>
+            <span>{t("removedToast", { name: toast.name })}</span>
             <button type="button" onClick={handleUndo} className="font-bold text-white underline">
-              Undo
+              {t("undo")}
             </button>
           </div>
         </div>

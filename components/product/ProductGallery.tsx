@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { Pill, X, ZoomIn } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 const PLACEHOLDER_COUNT = 4;
 
 export default function ProductGallery({ name, images = [] }: { name: string; images?: string[] }) {
+  const t = useTranslations("product");
   const [activeIndex, setActiveIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const hasImages = images.length > 0;
@@ -21,7 +23,7 @@ export default function ProductGallery({ name, images = [] }: { name: string; im
               key={i}
               type="button"
               onClick={() => setActiveIndex(i)}
-              aria-label={`Show image ${i + 1} of ${name}`}
+              aria-label={t("showImage", { index: i + 1, name })}
               className={`flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-neutral-100 md:h-[76px] md:w-[76px] ${
                 i === activeIndex ? "border-2 border-primary-500" : "border border-neutral-300"
               }`}
@@ -39,7 +41,7 @@ export default function ProductGallery({ name, images = [] }: { name: string; im
         <button
           type="button"
           onClick={() => setLightboxOpen(true)}
-          aria-label={`Zoom in on ${name}`}
+          aria-label={t("zoomIn", { name })}
           className="relative aspect-square flex-1 cursor-zoom-in overflow-hidden rounded-[20px] border border-neutral-200 bg-neutral-100"
         >
           <div className="flex h-full w-full items-center justify-center">
@@ -50,7 +52,7 @@ export default function ProductGallery({ name, images = [] }: { name: string; im
               <Pill className="h-16 w-16 text-neutral-300" strokeWidth={1.5} />
             )}
           </div>
-          <span className="absolute right-3 bottom-3 flex h-[34px] w-[34px] items-center justify-center rounded-full bg-neutral-900/55">
+          <span className="absolute bottom-3 end-3 flex h-[34px] w-[34px] items-center justify-center rounded-full bg-neutral-900/55">
             <ZoomIn className="h-4 w-4 text-white" />
           </span>
         </button>
@@ -73,8 +75,8 @@ export default function ProductGallery({ name, images = [] }: { name: string; im
             <button
               type="button"
               onClick={() => setLightboxOpen(false)}
-              aria-label="Close"
-              className="absolute -top-11 right-0 flex h-9 w-9 items-center justify-center rounded-full bg-white/15"
+              aria-label={t("close")}
+              className="absolute -top-11 end-0 flex h-9 w-9 items-center justify-center rounded-full bg-white/15"
             >
               <X className="h-5 w-5 text-white" />
             </button>

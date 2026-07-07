@@ -1,3 +1,5 @@
+import { useLocale, useTranslations } from "next-intl";
+import { categoryLabel } from "@/lib/categories";
 import type { CategoryRow } from "@/lib/queries";
 
 export interface PriceRange {
@@ -38,19 +40,22 @@ export default function FilterGroups({
   onClear,
   hideTitle = false,
 }: FilterGroupsProps) {
+  const t = useTranslations("listing");
+  const locale = useLocale();
+
   return (
     <div className="flex flex-col gap-6">
       {!hideTitle && (
         <div className="flex items-center justify-between">
-          <span className="font-headline text-base font-extrabold text-neutral-900">Filters</span>
+          <span className="font-headline text-base font-extrabold text-neutral-900">{t("filters")}</span>
           <button type="button" onClick={onClear} className="font-label text-[13px] font-semibold text-primary-500">
-            Clear all
+            {t("clearAll")}
           </button>
         </div>
       )}
 
       <div>
-        <div className={groupTitleClass}>Category</div>
+        <div className={groupTitleClass}>{t("groups.category")}</div>
         {categories.map((c) => (
           <label key={c.id} className={rowClass}>
             <input
@@ -59,13 +64,13 @@ export default function FilterGroups({
               onChange={() => onToggleCategory(c.id)}
               className={checkboxClass}
             />
-            <span className={rowLabelClass}>{c.label}</span>
+            <span className={rowLabelClass}>{categoryLabel(c, locale)}</span>
           </label>
         ))}
       </div>
 
       <div>
-        <div className={groupTitleClass}>Price</div>
+        <div className={groupTitleClass}>{t("groups.price")}</div>
         {priceRanges.map((r) => (
           <label key={r.id} className={rowClass}>
             <input
@@ -80,7 +85,7 @@ export default function FilterGroups({
       </div>
 
       <div>
-        <div className={groupTitleClass}>Brand</div>
+        <div className={groupTitleClass}>{t("groups.brand")}</div>
         <div className="flex max-h-[220px] flex-col overflow-y-auto">
           {brands.map((b) => (
             <label key={b} className={rowClass}>

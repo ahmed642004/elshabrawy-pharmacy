@@ -4,6 +4,11 @@
    "Pharmacy E-Commerce Website" (see CLAUDE.md). Primary: Royal Blue ·
    Secondary: Teal · Tertiary: Ice Blue · Neutral: Slate. */
 :root {
+  /* Locale-dependent font sources — swapped to Cairo under html[dir="rtl"]
+     (see the rules after the body selector below). */
+  --font-headline-src: var(--font-public-sans);
+  --font-body-src: var(--font-inter);
+
   --color-primary-50: #eff4ff;
   --color-primary-100: #dbe6ff;
   --color-primary-200: #bed2ff;
@@ -108,13 +113,28 @@
   --color-danger-500: var(--color-danger-500);
   --color-danger-600: var(--color-danger-600);
 
-  --font-headline: var(--font-public-sans);
-  --font-body: var(--font-inter);
-  --font-sans: var(--font-inter);
+  --font-headline: var(--font-headline-src);
+  --font-body: var(--font-body-src);
+  --font-sans: var(--font-body-src);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-body), Arial, Helvetica, sans-serif;
+  font-family: var(--font-body-src), Arial, Helvetica, sans-serif;
+}
+
+/* Arabic locale renders in Cairo (loaded in app/layout.tsx). The -src
+   indirection (rather than overriding --font-public-sans/--font-inter
+   directly) exists so the admin dashboard — which pins itself to dir="ltr"
+   and stays English — can recover the original Latin fonts: the source
+   variables are never overwritten, only which one the tokens point at. */
+html[dir="rtl"] {
+  --font-headline-src: var(--font-cairo);
+  --font-body-src: var(--font-cairo);
+}
+
+html[dir="rtl"] [dir="ltr"] {
+  --font-headline-src: var(--font-public-sans);
+  --font-body-src: var(--font-inter);
 }

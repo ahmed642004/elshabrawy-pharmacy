@@ -37,7 +37,7 @@ export default async function AdminOverviewPage() {
       <div className="mb-5 flex flex-col gap-3 md:mb-7 md:flex-row md:items-start md:justify-between md:gap-4">
         <div>
           <h1 className="m-0 font-headline text-2xl font-extrabold tracking-tight text-neutral-900 md:text-3xl">
-            Good morning, Dr. Fahmy
+            Good morning, Dr. Hend
           </h1>
           <p className="m-0 mt-1 text-sm text-neutral-500">{today} · here&apos;s how the pharmacy is doing today</p>
         </div>

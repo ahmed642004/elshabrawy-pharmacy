@@ -32,16 +32,17 @@ function toProduct(row: ProductRow): Product {
 export interface CategoryRow {
   id: string;
   label: string;
+  labelAr: string | null;
 }
 
 export async function getCategories(): Promise<CategoryRow[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("categories")
-    .select("id, label")
+    .select("id, label, label_ar")
     .order("sort_order");
   if (error) throw error;
-  return data;
+  return data.map((c) => ({ id: c.id, label: c.label, labelAr: c.label_ar }));
 }
 
 export async function getPopularProducts(): Promise<Product[]> {
@@ -192,7 +193,9 @@ export async function getRelatedProducts(categoryId: string, excludeSlug: string
 
 export interface AddressRow {
   id: string;
-  label: string;
+  // A flag rather than a pre-rendered "Default"/"Address" label so the
+  // client can localize the text.
+  isDefault: boolean;
   name: string;
   phone: string;
   address: string;
@@ -226,7 +229,7 @@ export async function getAddresses(): Promise<AddressesResult> {
     isLoggedIn: true,
     addresses: data.map((row) => ({
       id: row.id,
-      label: row.is_default ? "Default" : "Address",
+      isDefault: row.is_default,
       name: row.recipient ?? "",
       phone: row.phone ?? "",
       address: row.street ?? "",

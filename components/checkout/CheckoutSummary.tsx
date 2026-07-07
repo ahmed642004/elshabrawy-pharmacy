@@ -1,15 +1,17 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCart } from "@/lib/cart-context";
 import { getCartTotals, formatEGP } from "@/lib/cart-totals";
 
 export default function CheckoutSummary() {
+  const t = useTranslations("cart");
   const { items, promoApplied } = useCart();
   const { subtotal, deliveryFree, deliveryFee, discount, total } = getCartTotals(items, promoApplied);
 
   return (
     <div className="flex flex-col gap-4 rounded-[14px] bg-white p-6 shadow-sm">
-      <div className="font-headline text-base font-extrabold text-neutral-900">Order summary</div>
+      <div className="font-headline text-base font-extrabold text-neutral-900">{t("summary")}</div>
 
       <div className="flex flex-col gap-2">
         {items.map((item) => (
@@ -26,18 +28,18 @@ export default function CheckoutSummary() {
 
       <div className="flex flex-col gap-2">
         <div className="flex justify-between text-[13.5px] text-neutral-700">
-          <span>Subtotal</span>
+          <span>{t("subtotal")}</span>
           <span>{formatEGP(subtotal)}</span>
         </div>
         <div className="flex justify-between text-[13.5px] text-neutral-700">
-          <span>Delivery</span>
+          <span>{t("delivery")}</span>
           <span className={deliveryFree ? "font-bold text-secondary-600" : ""}>
-            {deliveryFree ? "Free" : formatEGP(deliveryFee)}
+            {deliveryFree ? t("free") : formatEGP(deliveryFee)}
           </span>
         </div>
         {promoApplied && (
           <div className="flex justify-between text-[13.5px] text-secondary-600">
-            <span>Discount</span>
+            <span>{t("discount")}</span>
             <span>-{formatEGP(discount)}</span>
           </div>
         )}
@@ -46,7 +48,7 @@ export default function CheckoutSummary() {
       <div className="h-px bg-neutral-200" />
 
       <div className="flex items-baseline justify-between">
-        <span className="font-headline text-sm font-bold text-neutral-900">Total</span>
+        <span className="font-headline text-sm font-bold text-neutral-900">{t("total")}</span>
         <span className="font-headline text-[22px] font-black text-neutral-900">{formatEGP(total)}</span>
       </div>
     </div>

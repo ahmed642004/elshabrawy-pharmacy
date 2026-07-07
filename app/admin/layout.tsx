@@ -15,7 +15,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   if (!isLoggedIn) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-neutral-50 px-4">
+      <main dir="ltr" className="flex min-h-screen items-center justify-center bg-neutral-50 px-4">
         <div className="flex max-w-[380px] flex-col items-center gap-3.5 rounded-[28px] border border-neutral-200 bg-white px-6 py-12 text-center">
           <span className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-tertiary-100">
             <LogIn className="h-[34px] w-[34px] text-primary-500" />
@@ -34,7 +34,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   if (!isAdmin) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-neutral-50 px-4">
+      <main dir="ltr" className="flex min-h-screen items-center justify-center bg-neutral-50 px-4">
         <div className="flex max-w-[380px] flex-col items-center gap-3.5 rounded-[28px] border border-neutral-200 bg-white px-6 py-12 text-center">
           <span className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-danger-50">
             <ShieldAlert className="h-[34px] w-[34px] text-danger-500" />
@@ -49,8 +49,11 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     );
   }
 
+  // dir="ltr" pins the dashboard to English/LTR even when the storefront's
+  // Arabic locale cookie has flipped <html dir> to rtl — the admin UI is
+  // deliberately not localized (internal staff tool).
   return (
-    <div className="flex h-screen w-full flex-col overflow-hidden bg-neutral-50 md:flex-row">
+    <div dir="ltr" className="flex h-screen w-full flex-col overflow-hidden bg-neutral-50 md:flex-row">
       <AdminSidebar />
       <div className="min-w-0 flex-1 overflow-y-auto">{children}</div>
     </div>

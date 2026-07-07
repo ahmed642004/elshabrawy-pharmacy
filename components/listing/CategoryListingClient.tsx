@@ -4,18 +4,20 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ChevronRight, ChevronDown, SlidersHorizontal, SearchX, X } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import ProductCard from "@/components/ProductCard";
 import FilterGroups from "@/components/listing/FilterGroups";
+import { categoryLabel } from "@/lib/categories";
 import { PRICE_RANGES } from "@/lib/price-ranges";
 import type { ListingProduct, CategoryRow } from "@/lib/queries";
 
 const SORT_OPTIONS = [
-  { id: "recommended", label: "Recommended" },
-  { id: "price-asc", label: "Price: low to high" },
-  { id: "price-desc", label: "Price: high to low" },
-  { id: "name-asc", label: "Name: A to Z" },
-];
+  { id: "recommended", labelKey: "recommended" },
+  { id: "price-asc", labelKey: "priceAsc" },
+  { id: "price-desc", labelKey: "priceDesc" },
+  { id: "name-asc", labelKey: "nameAsc" },
+] as const;
 
 function toggleInArray(arr: string[], value: string) {
   return arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value];
@@ -39,6 +41,8 @@ export default function CategoryListingClient({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const t = useTranslations("listing");
+  const locale = useLocale();
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
   const catParam = searchParams.get("cat");
@@ -84,8 +88,8 @@ export default function CategoryListingClient({
   // set — no client-side re-filtering needed.
   const activeCategory =
     selectedCategories.length === 1 ? categories.find((c) => c.id === selectedCategories[0]) : undefined;
-  const pageTitle = activeCategory ? activeCategory.label : "All products";
-  const resultCountLabel = `${products.length} product${products.length === 1 ? "" : "s"}`;
+  const pageTitle = activeCategory ? categoryLabel(activeCategory, locale) : t("allProducts");
+  const resultCountLabel = t("productCount", { count: products.length });
   const activeFilterCount = selectedCategories.length + selectedBrands.length + selectedPriceRanges.length;
 
   function clearFilters() {
@@ -103,7 +107,7 @@ export default function CategoryListingClient({
     categories,
     selectedCategories,
     onToggleCategory: (id: string) => setCategories(toggleInArray(selectedCategories, id)),
-    priceRanges: PRICE_RANGES,
+    priceRanges: PRICE_RANGES.map((r) => ({ id: r.id, label: t(`priceRanges.${r.id}`) })),
     selectedPriceRanges,
     onTogglePrice: (id: string) => setPriceRanges(toggleInArray(selectedPriceRanges, id)),
     brands,
@@ -117,9 +121,9 @@ export default function CategoryListingClient({
       <div>
         <div className="mb-2 flex items-center gap-1.5 text-[13px] text-neutral-500">
           <Link href="/" className="hover:text-neutral-700">
-            Home
+            {t("breadcrumbHome")}
           </Link>
-          <ChevronRight className="h-3.5 w-3.5" />
+          <ChevronRight className="h-3.5 w-3.5 rtl:rotate-180" />
           <span className="font-semibold text-neutral-900">{pageTitle}</span>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -136,7 +140,7 @@ export default function CategoryListingClient({
           onClick={() => setFilterSheetOpen(true)}
           className="flex h-[46px] flex-1 items-center justify-center gap-2 rounded-[10px] border border-neutral-300 bg-white font-label text-sm font-semibold text-neutral-700 md:hidden"
         >
-          <SlidersHorizontal className="h-[18px] w-[18px]" /> Filters
+          <SlidersHorizontal className="h-[18px] w-[18px]" /> {t("filters")}
           {activeFilterCount > 0 && (
             <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary-500 px-1 text-[11px] font-bold text-white">
               {activeFilterCount}
@@ -144,19 +148,19 @@ export default function CategoryListingClient({
           )}
         </button>
 
-        <div className="relative shrink-0 md:ml-auto">
+        <div className="relative shrink-0 md:ms-auto">
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="h-[46px] min-w-[200px] appearance-none rounded-[10px] border border-neutral-300 bg-white py-0 pr-10 pl-4 font-label text-sm font-semibold text-neutral-700"
+            className="h-[46px] min-w-[200px] appearance-none rounded-[10px] border border-neutral-300 bg-white py-0 pe-10 ps-4 font-label text-sm font-semibold text-neutral-700"
           >
             {SORT_OPTIONS.map((opt) => (
               <option key={opt.id} value={opt.id}>
-                {opt.label}
+                {t(`sort.${opt.labelKey}`)}
               </option>
             ))}
           </select>
-          <ChevronDown className="pointer-events-none absolute top-1/2 right-3.5 h-4 w-4 -translate-y-1/2 text-neutral-500" />
+          <ChevronDown className="pointer-events-none absolute end-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
         </div>
       </div>
 
@@ -175,14 +179,10 @@ export default function CategoryListingClient({
           ) : (
             <div className="flex flex-col items-center gap-3 rounded-[14px] border border-neutral-200 bg-white px-6 py-16 text-center">
               <SearchX className="h-9 w-9 text-neutral-300" />
-              <div className="font-headline text-[17px] font-bold text-neutral-900">
-                No products match your filters
-              </div>
-              <div className="max-w-[320px] text-sm text-neutral-500">
-                Try removing a filter or clearing all to see more results.
-              </div>
+              <div className="font-headline text-[17px] font-bold text-neutral-900">{t("noMatch")}</div>
+              <div className="max-w-[320px] text-sm text-neutral-500">{t("noMatchHint")}</div>
               <Button variant="outlined" size="sm" onClick={clearFilters}>
-                Clear all filters
+                {t("clearAllFilters")}
               </Button>
             </div>
           )}
@@ -194,11 +194,11 @@ export default function CategoryListingClient({
           <div onClick={() => setFilterSheetOpen(false)} className="absolute inset-0 bg-neutral-900/40" />
           <div className="relative flex max-h-[82vh] flex-col rounded-t-[20px] bg-white shadow-lg">
             <div className="flex shrink-0 items-center justify-between border-b border-neutral-200 px-5 py-4">
-              <span className="font-headline text-[17px] font-extrabold text-neutral-900">Filters</span>
+              <span className="font-headline text-[17px] font-extrabold text-neutral-900">{t("filters")}</span>
               <button
                 type="button"
                 onClick={() => setFilterSheetOpen(false)}
-                aria-label="Close filters"
+                aria-label={t("closeFilters")}
                 className="flex h-10 w-10 items-center justify-center rounded-[10px] border border-neutral-300 bg-white"
               >
                 <X className="h-[18px] w-[18px] text-neutral-700" />
@@ -209,10 +209,10 @@ export default function CategoryListingClient({
             </div>
             <div className="flex shrink-0 gap-2.5 border-t border-neutral-200 px-5 py-4">
               <Button variant="outlined" size="lg" className="flex-1" onClick={clearFilters}>
-                Clear all
+                {t("clearAll")}
               </Button>
               <Button variant="primary" size="lg" className="flex-1" onClick={() => setFilterSheetOpen(false)}>
-                Show {products.length} results
+                {t("showResults", { count: products.length })}
               </Button>
             </div>
           </div>

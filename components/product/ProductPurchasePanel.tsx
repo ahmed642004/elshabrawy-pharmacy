@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Star, Minus, Plus, ShoppingCart, Bell, Heart, Share2, Truck, ShieldCheck, Headset } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import type { StockState } from "@/components/ProductCard";
 import { useCart } from "@/lib/cart-context";
@@ -24,12 +25,6 @@ const stockToneClasses: Record<StockState, string> = {
   out: "bg-danger-50 text-danger-600",
 };
 
-const stockLabel: Record<StockState, string> = {
-  in: "In stock",
-  low: "Low stock",
-  out: "Out of stock",
-};
-
 export default function ProductPurchasePanel({
   slug,
   brand,
@@ -40,6 +35,8 @@ export default function ProductPurchasePanel({
   rating,
   reviewCount,
 }: ProductPurchasePanelProps) {
+  const t = useTranslations("product");
+  const tCard = useTranslations("productCard");
   const [qty, setQty] = useState(1);
   const [wishlisted, setWishlisted] = useState(false);
   const [notified, setNotified] = useState(false);
@@ -58,12 +55,12 @@ export default function ProductPurchasePanel({
 
       <div className="flex flex-wrap items-center gap-2.5">
         <span className={`w-fit rounded-full px-2 py-0.5 text-[11px] font-semibold ${stockToneClasses[stock]}`}>
-          {stockLabel[stock]}
+          {tCard(`stock.${stock}`)}
         </span>
         {rating != null && (
           <div className="flex items-center gap-1 text-[13px] text-neutral-500">
             <Star className="h-3.5 w-3.5 fill-warning-500 text-warning-500" />
-            <span className="font-bold text-neutral-900">{rating}</span> ({reviewCount} reviews)
+            <span className="font-bold text-neutral-900">{rating}</span> {t("reviewsShort", { count: reviewCount })}
           </div>
         )}
       </div>
@@ -85,14 +82,14 @@ export default function ProductPurchasePanel({
       <div className="flex flex-wrap items-center gap-3">
         {outOfStock ? (
           <Button variant="outlined" size="lg" className="min-w-[220px] flex-1" onClick={() => setNotified(true)}>
-            <Bell className="h-[18px] w-[18px]" /> {notified ? "We’ll notify you" : "Notify me when available"}
+            <Bell className="h-[18px] w-[18px]" /> {notified ? t("notified") : t("notifyAvailable")}
           </Button>
         ) : (
           <>
             <div className="flex h-12 items-center gap-3 rounded-[10px] border border-neutral-300 px-1.5">
               <button
                 type="button"
-                aria-label="Decrease quantity"
+                aria-label={t("decreaseQty")}
                 onClick={() => setQty((q) => Math.max(1, q - 1))}
                 className="flex h-9 w-9 items-center justify-center text-neutral-700"
               >
@@ -103,7 +100,7 @@ export default function ProductPurchasePanel({
               </span>
               <button
                 type="button"
-                aria-label="Increase quantity"
+                aria-label={t("increaseQty")}
                 onClick={() => setQty((q) => q + 1)}
                 className="flex h-9 w-9 items-center justify-center text-neutral-700"
               >
@@ -116,7 +113,7 @@ export default function ProductPurchasePanel({
               className="min-w-[180px] flex-1"
               onClick={() => addItem({ slug, name, brand, price, stock }, qty)}
             >
-              <ShoppingCart className="h-[18px] w-[18px]" /> Add to cart
+              <ShoppingCart className="h-[18px] w-[18px]" /> {t("addToCart")}
             </Button>
           </>
         )}
@@ -131,22 +128,22 @@ export default function ProductPurchasePanel({
           }`}
         >
           <Heart className={`h-[18px] w-[18px] ${wishlisted ? "fill-current" : ""}`} />
-          {wishlisted ? "Wishlisted" : "Add to wishlist"}
+          {wishlisted ? t("wishlisted") : t("addToWishlist")}
         </button>
         <button type="button" className="flex items-center gap-1.5 text-[13.5px] font-semibold text-neutral-500">
-          <Share2 className="h-[18px] w-[18px]" /> Share
+          <Share2 className="h-[18px] w-[18px]" /> {t("share")}
         </button>
       </div>
 
       <div className="mt-1.5 flex flex-col gap-2.5 rounded-[14px] border border-primary-100 bg-tertiary-100 px-4 py-3.5">
         <div className="flex items-center gap-2.5 text-[13px] text-neutral-700">
-          <Truck className="h-4 w-4 shrink-0 text-primary-500" /> Delivery in 2 hours across Greater Cairo
+          <Truck className="h-4 w-4 shrink-0 text-primary-500" /> {t("deliveryInfo")}
         </div>
         <div className="flex items-center gap-2.5 text-[13px] text-neutral-700">
-          <ShieldCheck className="h-4 w-4 shrink-0 text-secondary-500" /> 100% genuine, licensed pharmacy
+          <ShieldCheck className="h-4 w-4 shrink-0 text-secondary-500" /> {t("genuineInfo")}
         </div>
         <div className="flex items-center gap-2.5 text-[13px] text-neutral-700">
-          <Headset className="h-4 w-4 shrink-0 text-primary-500" /> Ask a pharmacist — free chat, 24/7
+          <Headset className="h-4 w-4 shrink-0 text-primary-500" /> {t("askInfo")}
         </div>
       </div>
     </div>

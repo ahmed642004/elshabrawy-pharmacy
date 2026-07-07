@@ -4,19 +4,21 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Search, MapPin, User, ShoppingCart, Menu, X, LogOut, Pill, LayoutDashboard, Package } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
+import LocaleSwitcher from "@/components/LocaleSwitcher";
 import { useCart } from "@/lib/cart-context";
 import { createClient } from "@/lib/supabase/client";
 import { formatEGP } from "@/lib/cart-totals";
 
 const NAV_LINKS = [
-  { label: "Skincare", href: "/category/skincare" },
-  { label: "Vitamins & supplements", href: "/category/vitamins" },
-  { label: "Hair care", href: "/category/hair" },
-  { label: "Personal care", href: "/category/personal" },
-  { label: "Devices", href: "/category/devices" },
-  { label: "Offers", href: "/category/offers", danger: true },
-];
+  { key: "skincare", href: "/category/skincare" },
+  { key: "vitamins", href: "/category/vitamins" },
+  { key: "hair", href: "/category/hair" },
+  { key: "personal", href: "/category/personal" },
+  { key: "devices", href: "/category/devices" },
+  { key: "offers", href: "/category/offers", danger: true },
+] as const;
 
 export interface HeaderUser {
   email: string;
@@ -45,18 +47,19 @@ interface LiveSearchDropdownProps {
 }
 
 function LiveSearchDropdown({ open, loading, results, query, onClose, onSeeAll }: LiveSearchDropdownProps) {
+  const t = useTranslations("header");
   if (!open) return null;
   return (
     <>
       <button
         type="button"
-        aria-label="Close search results"
+        aria-label={t("closeSearchResults")}
         onClick={onClose}
         className="fixed inset-0 z-40 cursor-default"
       />
       <div className="absolute inset-x-0 top-full z-50 mt-2 max-h-[360px] overflow-y-auto rounded-[14px] border border-neutral-200 bg-white p-2 shadow-lg">
         {loading ? (
-          <div className="px-3 py-4 text-center text-sm text-neutral-500">Searching…</div>
+          <div className="px-3 py-4 text-center text-sm text-neutral-500">{t("searching")}</div>
         ) : results.length > 0 ? (
           <>
             {results.map((r) => (
@@ -92,11 +95,11 @@ function LiveSearchDropdown({ open, loading, results, query, onClose, onSeeAll }
               onClick={onSeeAll}
               className="mt-1 block w-full rounded-[10px] px-2 py-2 text-center text-[13px] font-semibold text-primary-500 hover:bg-primary-50"
             >
-              See all results for “{query.trim()}”
+              {t("seeAllResults", { query: query.trim() })}
             </button>
           </>
         ) : (
-          <div className="px-3 py-4 text-center text-sm text-neutral-500">No products found</div>
+          <div className="px-3 py-4 text-center text-sm text-neutral-500">{t("noResults")}</div>
         )}
       </div>
     </>
@@ -105,6 +108,7 @@ function LiveSearchDropdown({ open, loading, results, query, onClose, onSeeAll }
 
 export default function HeaderClient({ user }: { user: HeaderUser | null }) {
   const router = useRouter();
+  const t = useTranslations("header");
   const [menuOpen, setMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -213,24 +217,26 @@ export default function HeaderClient({ user }: { user: HeaderUser | null }) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => searchQuery.trim() && setLiveOpen(true)}
-                placeholder="Search medicines, brands, health needs…"
+                placeholder={t("searchPlaceholder")}
                 className="h-full w-full min-w-0 border-none bg-transparent font-body text-sm text-neutral-900 outline-none placeholder:text-neutral-400"
               />
             </div>
             <LiveSearchDropdown open={liveOpen} loading={liveLoading} results={liveResults} query={searchQuery} onClose={closeLiveSearch} onSeeAll={goToFullResults} />
           </form>
 
-          <div className="ml-auto flex shrink-0 items-center gap-4">
+          <div className="ms-auto flex shrink-0 items-center gap-4">
             <span className="flex items-center gap-1.5 whitespace-nowrap text-[13px] text-neutral-500">
-              <MapPin className="h-4 w-4 text-secondary-500" /> Cairo · Nasr City
+              <MapPin className="h-4 w-4 text-secondary-500" /> {t("location")}
             </span>
+
+            <LocaleSwitcher />
 
             {user ? (
               <div className="relative">
                 <button
                   type="button"
                   onClick={() => setAccountMenuOpen((v) => !v)}
-                  aria-label="Account menu"
+                  aria-label={t("accountMenu")}
                   className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-tertiary-100 text-primary-600 hover:bg-tertiary-100/70"
                 >
                   <span className="font-label text-sm font-bold">
@@ -241,46 +247,46 @@ export default function HeaderClient({ user }: { user: HeaderUser | null }) {
                   <>
                     <button
                       type="button"
-                      aria-label="Close account menu"
+                      aria-label={t("closeAccountMenu")}
                       onClick={() => setAccountMenuOpen(false)}
                       className="fixed inset-0 z-40 cursor-default"
                     />
-                    <div className="absolute right-0 z-50 mt-2 w-56 rounded-[14px] border border-neutral-200 bg-white p-3 shadow-lg">
+                    <div className="absolute end-0 z-50 mt-2 w-56 rounded-[14px] border border-neutral-200 bg-white p-3 shadow-lg">
                       <div className="mb-2 border-b border-neutral-100 pb-2">
                         <div className="truncate font-headline text-sm font-bold text-neutral-900">
-                          {user.fullName || "Signed in"}
+                          {user.fullName || t("signedIn")}
                         </div>
                         <div className="truncate text-xs text-neutral-500">{user.email}</div>
                       </div>
                       <Link
                         href="/account"
                         onClick={() => setAccountMenuOpen(false)}
-                        className="flex w-full items-center gap-2 rounded-[10px] px-2 py-2 text-left text-[13.5px] font-semibold text-neutral-700 hover:bg-neutral-50"
+                        className="flex w-full items-center gap-2 rounded-[10px] px-2 py-2 text-start text-[13.5px] font-semibold text-neutral-700 hover:bg-neutral-50"
                       >
-                        <User className="h-4 w-4" /> My account
+                        <User className="h-4 w-4" /> {t("myAccount")}
                       </Link>
                       <Link
                         href="/account/orders"
                         onClick={() => setAccountMenuOpen(false)}
-                        className="flex w-full items-center gap-2 rounded-[10px] px-2 py-2 text-left text-[13.5px] font-semibold text-neutral-700 hover:bg-neutral-50"
+                        className="flex w-full items-center gap-2 rounded-[10px] px-2 py-2 text-start text-[13.5px] font-semibold text-neutral-700 hover:bg-neutral-50"
                       >
-                        <Package className="h-4 w-4" /> My orders
+                        <Package className="h-4 w-4" /> {t("myOrders")}
                       </Link>
                       {user.isAdmin && (
                         <Link
                           href="/admin"
                           onClick={() => setAccountMenuOpen(false)}
-                          className="flex w-full items-center gap-2 rounded-[10px] px-2 py-2 text-left text-[13.5px] font-semibold text-neutral-700 hover:bg-neutral-50"
+                          className="flex w-full items-center gap-2 rounded-[10px] px-2 py-2 text-start text-[13.5px] font-semibold text-neutral-700 hover:bg-neutral-50"
                         >
-                          <LayoutDashboard className="h-4 w-4" /> Ops dashboard
+                          <LayoutDashboard className="h-4 w-4" /> {t("opsDashboard")}
                         </Link>
                       )}
                       <button
                         type="button"
                         onClick={handleSignOut}
-                        className="flex w-full items-center gap-2 rounded-[10px] px-2 py-2 text-left text-[13.5px] font-semibold text-danger-500 hover:bg-danger-50"
+                        className="flex w-full items-center gap-2 rounded-[10px] px-2 py-2 text-start text-[13.5px] font-semibold text-danger-500 hover:bg-danger-50"
                       >
-                        <LogOut className="h-4 w-4" /> Sign out
+                        <LogOut className="h-4 w-4" /> {t("signOut")}
                       </button>
                     </div>
                   </>
@@ -289,7 +295,7 @@ export default function HeaderClient({ user }: { user: HeaderUser | null }) {
             ) : (
               <Link
                 href="/auth"
-                aria-label="Account"
+                aria-label={t("account")}
                 className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 text-neutral-700 hover:bg-neutral-50"
               >
                 <User className="h-[18px] w-[18px]" />
@@ -298,12 +304,12 @@ export default function HeaderClient({ user }: { user: HeaderUser | null }) {
 
             <Link
               href="/cart"
-              aria-label="Cart"
+              aria-label={t("cart")}
               className="relative flex h-10 w-10 items-center justify-center rounded-full bg-primary-500 text-white hover:bg-primary-600"
             >
               <ShoppingCart className="h-[18px] w-[18px]" />
               {itemCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-white bg-danger-500 px-1 text-[11px] font-bold text-white">
+                <span className="absolute -end-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-white bg-danger-500 px-1 text-[11px] font-bold text-white">
                   {itemCount}
                 </span>
               )}
@@ -316,9 +322,9 @@ export default function HeaderClient({ user }: { user: HeaderUser | null }) {
             <Link
               key={link.href}
               href={link.href}
-              className={`whitespace-nowrap font-label text-[13px] font-semibold no-underline ${link.danger ? "text-danger-500" : "text-neutral-500"}`}
+              className={`whitespace-nowrap font-label text-[13px] font-semibold no-underline ${"danger" in link && link.danger ? "text-danger-500" : "text-neutral-500"}`}
             >
-              {link.label}
+              {t(`nav.${link.key}`)}
             </Link>
           ))}
         </nav>
@@ -329,7 +335,7 @@ export default function HeaderClient({ user }: { user: HeaderUser | null }) {
         <div className="mb-3 flex items-center gap-3">
           <button
             onClick={() => setMenuOpen(true)}
-            aria-label="Open menu"
+            aria-label={t("openMenu")}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] border border-neutral-300 bg-white"
           >
             <Menu className="h-5 w-5 text-neutral-700" />
@@ -344,12 +350,12 @@ export default function HeaderClient({ user }: { user: HeaderUser | null }) {
           </Link>
           <Link
             href="/cart"
-            aria-label="Cart"
+            aria-label={t("cart")}
             className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-500 text-white"
           >
             <ShoppingCart className="h-[18px] w-[18px]" />
             {itemCount > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-white bg-danger-500 px-1 text-[11px] font-bold text-white">
+              <span className="absolute -end-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-white bg-danger-500 px-1 text-[11px] font-bold text-white">
                 {itemCount}
               </span>
             )}
@@ -362,7 +368,7 @@ export default function HeaderClient({ user }: { user: HeaderUser | null }) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => searchQuery.trim() && setLiveOpen(true)}
-            placeholder="Search medicines, brands…"
+            placeholder={t("searchPlaceholderShort")}
             className="h-full w-full min-w-0 border-none bg-transparent font-body text-sm text-neutral-900 outline-none placeholder:text-neutral-400"
           />
           <LiveSearchDropdown open={liveOpen} loading={liveLoading} results={liveResults} query={searchQuery} onClose={closeLiveSearch} onSeeAll={goToFullResults} />
@@ -373,10 +379,10 @@ export default function HeaderClient({ user }: { user: HeaderUser | null }) {
       {menuOpen && (
         <div className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-white md:hidden">
           <div className="flex items-center justify-between border-b border-neutral-200 p-4">
-            <span className="font-headline text-lg font-extrabold text-neutral-900">Menu</span>
+            <span className="font-headline text-lg font-extrabold text-neutral-900">{t("menu")}</span>
             <button
               onClick={() => setMenuOpen(false)}
-              aria-label="Close menu"
+              aria-label={t("closeMenu")}
               className="flex h-11 w-11 items-center justify-center rounded-[10px] border border-neutral-300 bg-white"
             >
               <X className="h-5 w-5 text-neutral-700" />
@@ -388,46 +394,47 @@ export default function HeaderClient({ user }: { user: HeaderUser | null }) {
                 key={link.href}
                 href={link.href}
                 onClick={() => setMenuOpen(false)}
-                className={`flex min-h-11 items-center border-b border-neutral-100 py-3.5 font-label text-base font-semibold no-underline ${link.danger ? "text-danger-500" : "text-neutral-700"}`}
+                className={`flex min-h-11 items-center border-b border-neutral-100 py-3.5 font-label text-base font-semibold no-underline ${"danger" in link && link.danger ? "text-danger-500" : "text-neutral-700"}`}
               >
-                {link.label}
+                {t(`nav.${link.key}`)}
               </Link>
             ))}
           </div>
           <div className="mt-auto flex flex-col gap-2.5 border-t border-neutral-200 p-4">
+            <LocaleSwitcher className="w-full justify-center" />
             {user ? (
               <>
                 <div className="px-1 pb-1">
                   <div className="truncate font-headline text-sm font-bold text-neutral-900">
-                    {user.fullName || "Signed in"}
+                    {user.fullName || t("signedIn")}
                   </div>
                   <div className="truncate text-xs text-neutral-500">{user.email}</div>
                 </div>
                 <Link href="/account" onClick={() => setMenuOpen(false)}>
                   <Button variant="outlined" size="lg" fullWidth>
-                    <User className="h-[18px] w-[18px]" /> My account
+                    <User className="h-[18px] w-[18px]" /> {t("myAccount")}
                   </Button>
                 </Link>
                 <Link href="/account/orders" onClick={() => setMenuOpen(false)}>
                   <Button variant="outlined" size="lg" fullWidth>
-                    <Package className="h-[18px] w-[18px]" /> My orders
+                    <Package className="h-[18px] w-[18px]" /> {t("myOrders")}
                   </Button>
                 </Link>
                 {user.isAdmin && (
                   <Link href="/admin" onClick={() => setMenuOpen(false)}>
                     <Button variant="outlined" size="lg" fullWidth>
-                      <LayoutDashboard className="h-[18px] w-[18px]" /> Ops dashboard
+                      <LayoutDashboard className="h-[18px] w-[18px]" /> {t("opsDashboard")}
                     </Button>
                   </Link>
                 )}
                 <Button variant="outlined" size="lg" fullWidth onClick={handleSignOut}>
-                  <LogOut className="h-[18px] w-[18px]" /> Sign out
+                  <LogOut className="h-[18px] w-[18px]" /> {t("signOut")}
                 </Button>
               </>
             ) : (
               <Link href="/auth" onClick={() => setMenuOpen(false)}>
                 <Button variant="outlined" size="lg" fullWidth>
-                  <User className="h-[18px] w-[18px]" /> Sign in
+                  <User className="h-[18px] w-[18px]" /> {t("signIn")}
                 </Button>
               </Link>
             )}

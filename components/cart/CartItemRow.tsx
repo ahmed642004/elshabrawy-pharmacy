@@ -1,6 +1,7 @@
 "use client";
 
 import { Pill, Minus, Plus, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useCart, type CartItem } from "@/lib/cart-context";
 import { formatEGP } from "@/lib/cart-totals";
 
@@ -10,6 +11,7 @@ interface CartItemRowProps {
 }
 
 export default function CartItemRow({ item, onRemove }: CartItemRowProps) {
+  const t = useTranslations("cart");
   const { updateQty, saveForLater } = useCart();
   const outOfStock = item.stock === "out";
 
@@ -52,7 +54,7 @@ export default function CartItemRow({ item, onRemove }: CartItemRowProps) {
           {outOfStock && (
             <div className="flex flex-wrap gap-1.5">
               <span className="w-fit rounded-full bg-danger-50 px-2 py-0.5 text-[11px] font-semibold text-danger-600">
-                No longer available
+                {t("noLongerAvailable")}
               </span>
             </div>
           )}
@@ -62,7 +64,7 @@ export default function CartItemRow({ item, onRemove }: CartItemRowProps) {
               <div className="flex h-9 w-fit items-center gap-2.5 rounded-[10px] border border-neutral-300 px-1">
                 <button
                   type="button"
-                  aria-label={`Decrease quantity of ${item.name}`}
+                  aria-label={t("decreaseQty", { name: item.name })}
                   onClick={() => updateQty(item.slug, item.qty - 1)}
                   className="flex h-7 w-7 items-center justify-center rounded-[6px] text-neutral-700"
                 >
@@ -73,7 +75,7 @@ export default function CartItemRow({ item, onRemove }: CartItemRowProps) {
                 </span>
                 <button
                   type="button"
-                  aria-label={`Increase quantity of ${item.name}`}
+                  aria-label={t("increaseQty", { name: item.name })}
                   onClick={() => updateQty(item.slug, item.qty + 1)}
                   className="flex h-7 w-7 items-center justify-center rounded-[6px] text-neutral-700"
                 >
@@ -94,7 +96,7 @@ export default function CartItemRow({ item, onRemove }: CartItemRowProps) {
               onClick={() => onRemove(item)}
               className="flex items-center gap-1.5 text-[13px] font-semibold text-neutral-500"
             >
-              <Trash2 className="h-3.5 w-3.5" /> Remove
+              <Trash2 className="h-3.5 w-3.5" /> {t("remove")}
             </button>
             {!outOfStock && (
               <button
@@ -102,7 +104,7 @@ export default function CartItemRow({ item, onRemove }: CartItemRowProps) {
                 onClick={() => saveForLater(item.slug)}
                 className="text-[13px] font-semibold text-neutral-500"
               >
-                Save for later
+                {t("saveForLater")}
               </button>
             )}
           </div>

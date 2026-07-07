@@ -3,33 +3,26 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Check, ChevronDown, PackageSearch, X } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import OrderStatusBadge from "@/components/admin/OrderStatusBadge";
 import { formatEGP } from "@/lib/cart-totals";
 import type { AdminOrder } from "@/lib/queries";
 
-const TRACKING_STEPS = [
-  { key: "placed", label: "Placed" },
-  { key: "confirmed", label: "Confirmed" },
-  { key: "delivered", label: "Delivered" },
-] as const;
-
-const PAYMENT_METHOD_LABEL: Record<string, string> = {
-  cod: "Cash on delivery",
-  card: "Card on delivery",
-  wallet: "Mobile wallet",
-};
+const TRACKING_STEPS = ["placed", "confirmed", "delivered"] as const;
 
 function StatusTimeline({ status }: { status: AdminOrder["status"] }) {
+  const t = useTranslations("account");
+
   if (status === "cancelled") {
     return (
       <div className="flex items-center gap-2 rounded-[10px] bg-danger-50 px-3.5 py-2.5 text-[13px] font-semibold text-danger-600">
-        <X className="h-4 w-4" /> This order was cancelled.
+        <X className="h-4 w-4" /> {t("cancelled")}
       </div>
     );
   }
 
-  const currentIndex = TRACKING_STEPS.findIndex((s) => s.key === status);
+  const currentIndex = TRACKING_STEPS.findIndex((s) => s === status);
 
   return (
     <div className="flex items-start">
@@ -38,7 +31,7 @@ function StatusTimeline({ status }: { status: AdminOrder["status"] }) {
         const current = i === currentIndex;
         const isLast = i === TRACKING_STEPS.length - 1;
         return (
-          <div key={step.key} className={`flex items-center ${isLast ? "flex-none" : "flex-1"}`}>
+          <div key={step} className={`flex items-center ${isLast ? "flex-none" : "flex-1"}`}>
             <div className="flex shrink-0 flex-col items-center gap-1.5">
               <span
                 className={`flex h-[26px] w-[26px] items-center justify-center rounded-full font-label text-xs font-bold ${
@@ -52,7 +45,7 @@ function StatusTimeline({ status }: { status: AdminOrder["status"] }) {
                   current ? "font-bold text-neutral-900" : "font-semibold text-neutral-400"
                 }`}
               >
-                {step.label}
+                {t(`tracking.${step}`)}
               </span>
             </div>
             {!isLast && <div className={`mt-[13px] h-0.5 flex-1 ${done ? "bg-primary-500" : "bg-neutral-200"}`} />}
@@ -64,6 +57,10 @@ function StatusTimeline({ status }: { status: AdminOrder["status"] }) {
 }
 
 export default function OrderHistoryClient({ orders }: { orders: AdminOrder[] }) {
+  const t = useTranslations("account");
+  const tCart = useTranslations("cart");
+  const locale = useLocale();
+  const dateLocale = locale === "ar" ? "ar-EG" : "en-US";
   const [expandedId, setExpandedId] = useState<string | null>(orders[0]?.id ?? null);
 
   if (orders.length === 0) {
@@ -72,13 +69,13 @@ export default function OrderHistoryClient({ orders }: { orders: AdminOrder[] })
         <span className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-tertiary-100">
           <PackageSearch className="h-[34px] w-[34px] text-primary-500" />
         </span>
-        <div className="font-headline text-xl font-extrabold text-neutral-900">No orders yet</div>
+        <div className="font-headline text-xl font-extrabold text-neutral-900">{t("noOrders")}</div>
         <div className="max-w-[320px] text-sm text-neutral-500">
-          When you place an order, it will show up here so you can track it.
+          {t("noOrdersHint")}
         </div>
         <Link href="/">
           <Button variant="primary" size="lg">
-            Browse products
+            {t("browseProducts")}
           </Button>
         </Link>
       </div>
@@ -89,7 +86,7 @@ export default function OrderHistoryClient({ orders }: { orders: AdminOrder[] })
     <div className="flex flex-col gap-3.5">
       {orders.map((order) => {
         const expanded = expandedId === order.id;
-        const placedDate = new Intl.DateTimeFormat("en-US", {
+        const placedDate = new Intl.DateTimeFormat(dateLocale, {
           timeZone: "Africa/Cairo",
           month: "long",
           day: "numeric",
@@ -97,6 +94,7 @@ export default function OrderHistoryClient({ orders }: { orders: AdminOrder[] })
           hour: "numeric",
           minute: "2-digit",
         }).format(new Date(order.createdAt));
+        const itemQty = order.items.reduce((n, i) => n + i.qty, 0);
 
         return (
           <div key={order.id} className="overflow-hidden rounded-[20px] border border-neutral-200 bg-white shadow-sm">
@@ -111,8 +109,7 @@ export default function OrderHistoryClient({ orders }: { orders: AdminOrder[] })
                   <OrderStatusBadge status={order.status} />
                 </div>
                 <div className="mt-0.5 text-xs text-neutral-500">
-                  {placedDate} · {order.items.reduce((n, i) => n + i.qty, 0)} item
-                  {order.items.reduce((n, i) => n + i.qty, 0) === 1 ? "" : "s"}
+                  {placedDate} · {t("itemCount", { count: itemQty })}
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-3">
@@ -129,7 +126,7 @@ export default function OrderHistoryClient({ orders }: { orders: AdminOrder[] })
 
                 <div>
                   <div className="mb-2 font-label text-[11px] font-semibold tracking-wide text-neutral-400 uppercase">
-                    Items
+                    {t("items")}
                   </div>
                   <div className="flex flex-col gap-2">
                     {order.items.map((item, i) => (
@@ -143,21 +140,21 @@ export default function OrderHistoryClient({ orders }: { orders: AdminOrder[] })
                   </div>
                   <div className="mt-3 flex flex-col gap-1 border-t border-neutral-100 pt-3 text-sm">
                     <div className="flex justify-between text-neutral-500">
-                      <span>Subtotal</span>
+                      <span>{tCart("subtotal")}</span>
                       <span>{formatEGP(order.subtotal)}</span>
                     </div>
                     <div className="flex justify-between text-neutral-500">
-                      <span>Delivery</span>
-                      <span>{order.deliveryFee > 0 ? formatEGP(order.deliveryFee) : "Free"}</span>
+                      <span>{tCart("delivery")}</span>
+                      <span>{order.deliveryFee > 0 ? formatEGP(order.deliveryFee) : tCart("free")}</span>
                     </div>
                     {order.discount > 0 && (
                       <div className="flex justify-between text-secondary-600">
-                        <span>Discount</span>
+                        <span>{tCart("discount")}</span>
                         <span>-{formatEGP(order.discount)}</span>
                       </div>
                     )}
                     <div className="mt-1 flex justify-between font-headline text-base font-bold text-neutral-900">
-                      <span>Total</span>
+                      <span>{tCart("total")}</span>
                       <span>{formatEGP(order.total)}</span>
                     </div>
                   </div>
@@ -166,17 +163,19 @@ export default function OrderHistoryClient({ orders }: { orders: AdminOrder[] })
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <div className="mb-1 font-label text-[11px] font-semibold tracking-wide text-neutral-400 uppercase">
-                      Deliver to
+                      {t("deliverTo")}
                     </div>
                     <div className="text-sm text-neutral-700">{order.customerName}</div>
                     <div className="text-sm text-neutral-500">{order.customerAddress || "—"}</div>
                   </div>
                   <div>
                     <div className="mb-1 font-label text-[11px] font-semibold tracking-wide text-neutral-400 uppercase">
-                      Payment
+                      {t("payment")}
                     </div>
                     <div className="text-sm text-neutral-700">
-                      {PAYMENT_METHOD_LABEL[order.paymentMethod] ?? order.paymentMethod}
+                      {t.has(`paymentMethods.${order.paymentMethod}`)
+                        ? t(`paymentMethods.${order.paymentMethod}`)
+                        : order.paymentMethod}
                     </div>
                   </div>
                 </div>

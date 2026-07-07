@@ -27,6 +27,16 @@ export function getCategoryVisual(id: string): CategoryVisual {
   return CATEGORY_VISUALS[id] ?? DEFAULT_VISUAL;
 }
 
+// Picks the customer-facing category label by locale: Arabic when the locale
+// is "ar" and an Arabic label exists, otherwise the English label. Admin UI
+// stays LTR/English and reads `label` directly, so it never calls this.
+export function categoryLabel(
+  category: { label: string; labelAr: string | null },
+  locale: string,
+): string {
+  return locale === "ar" && category.labelAr ? category.labelAr : category.label;
+}
+
 // Maps old/alias category slugs (e.g. Home's earlier hair-care/personal-care
 // copy) to a canonical id. This is pure URL-compatibility logic, not data, so
 // it stays hardcoded — but it's validated against the real category ids

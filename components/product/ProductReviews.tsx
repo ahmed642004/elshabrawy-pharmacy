@@ -1,4 +1,5 @@
 import { Star } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 
 export interface Review {
   authorName: string;
@@ -7,8 +8,11 @@ export interface Review {
   createdAt: string;
 }
 
-function formatReviewDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+function formatReviewDate(iso: string, locale: string) {
+  return new Date(iso).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US", {
+    month: "long",
+    year: "numeric",
+  });
 }
 
 function StarRow({ rating }: { rating: number }) {
@@ -31,16 +35,19 @@ interface ProductReviewsProps {
 }
 
 export default function ProductReviews({ rating, reviewCount, reviews }: ProductReviewsProps) {
+  const t = useTranslations("product");
+  const locale = useLocale();
+
   return (
     <div>
       <h2 className="m-0 mb-4 font-headline text-xl font-extrabold tracking-tight text-neutral-900 md:text-2xl">
-        Reviews
+        {t("reviews")}
       </h2>
       <div className="grid grid-cols-1 items-start gap-7 md:grid-cols-[220px_1fr]">
         <div className="flex flex-col items-start gap-1.5 rounded-[14px] border border-primary-100 bg-tertiary-100 p-5 md:items-center">
           <span className="font-headline text-4xl leading-none font-black text-neutral-900">{rating ?? "—"}</span>
           <StarRow rating={rating ?? 0} />
-          <span className="text-[13px] text-neutral-500">Based on {reviewCount} reviews</span>
+          <span className="text-[13px] text-neutral-500">{t("basedOn", { count: reviewCount })}</span>
         </div>
 
         <div className="flex flex-col gap-[18px]">
@@ -49,7 +56,7 @@ export default function ProductReviews({ rating, reviewCount, reviews }: Product
               <div key={i} className="border-b border-neutral-200 pb-[18px] last:border-b-0 last:pb-0">
                 <div className="mb-1.5 flex items-center justify-between gap-3">
                   <span className="font-headline text-sm font-bold text-neutral-900">{r.authorName}</span>
-                  <span className="text-xs text-neutral-400">{formatReviewDate(r.createdAt)}</span>
+                  <span className="text-xs text-neutral-400">{formatReviewDate(r.createdAt, locale)}</span>
                 </div>
                 <div className="mb-2">
                   <StarRow rating={r.rating} />
@@ -58,7 +65,7 @@ export default function ProductReviews({ rating, reviewCount, reviews }: Product
               </div>
             ))
           ) : (
-            <p className="m-0 text-sm text-neutral-500">No reviews yet.</p>
+            <p className="m-0 text-sm text-neutral-500">{t("noReviews")}</p>
           )}
         </div>
       </div>

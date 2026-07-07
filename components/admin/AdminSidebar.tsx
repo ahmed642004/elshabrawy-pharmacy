@@ -18,7 +18,7 @@ function Logo() {
       </span>
       <div className="leading-tight">
         <div className="font-headline text-base font-bold text-neutral-900">
-          Clinical<span className="text-primary-500">Clarity</span>
+          Elshabrawy<span className="text-primary-500">Pharmacy</span>
         </div>
         <div className="font-label text-[10px] font-semibold tracking-wide text-neutral-400 uppercase">
           Ops dashboard
@@ -89,13 +89,13 @@ export default function AdminSidebar() {
               <Stethoscope className="h-4 w-4 text-white" strokeWidth={2} />
             </span>
             <div className="leading-tight">
-              <div className="font-label text-sm font-semibold text-neutral-900">Dr. Laila Fahmy</div>
+              <div className="font-label text-sm font-semibold text-neutral-900">Dr. Hend Elshabrawy</div>
               <div className="text-[11px] text-neutral-500">Pharmacist on duty</div>
             </div>
           </div>
           <div className="flex items-center gap-1.5 font-label text-[11px] font-semibold text-secondary-700">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-success-500" />
-            Online · 3 chats waiting
+            Online
           </div>
         </div>
       </aside>

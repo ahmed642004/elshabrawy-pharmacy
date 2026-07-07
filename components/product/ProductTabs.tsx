@@ -2,14 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
-
-const DEFAULT_CONTENT: Record<string, string> = {
-  description: "No description available for this product yet.",
-  dosage: "Follow the directions on the packaging, or ask your pharmacist for guidance.",
-  ingredients: "Ingredient information is not available for this product yet.",
-  warnings: "Keep out of reach of children. Consult your pharmacist if you have any concerns.",
-  storage: "Store in a cool, dry place, away from direct sunlight.",
-};
+import { useTranslations } from "next-intl";
 
 interface ProductTabsProps {
   description?: string | null;
@@ -20,12 +13,17 @@ interface ProductTabsProps {
 }
 
 export default function ProductTabs({ description, dosage, ingredients, warnings, storage }: ProductTabsProps) {
+  const t = useTranslations("product");
+
+  // Real product content from the DB renders as-is (product copy stays in
+  // its source language — see CLAUDE.md); only the tab labels and the
+  // fallback copy for null columns are localized.
   const TABS = [
-    { id: "description", label: "Description", content: description || DEFAULT_CONTENT.description },
-    { id: "dosage", label: "Dosage & usage", content: dosage || DEFAULT_CONTENT.dosage },
-    { id: "ingredients", label: "Ingredients", content: ingredients || DEFAULT_CONTENT.ingredients },
-    { id: "warnings", label: "Warnings & side effects", content: warnings || DEFAULT_CONTENT.warnings },
-    { id: "storage", label: "Storage", content: storage || DEFAULT_CONTENT.storage },
+    { id: "description", label: t("tabs.description"), content: description || t("defaults.description") },
+    { id: "dosage", label: t("tabs.dosage"), content: dosage || t("defaults.dosage") },
+    { id: "ingredients", label: t("tabs.ingredients"), content: ingredients || t("defaults.ingredients") },
+    { id: "warnings", label: t("tabs.warnings"), content: warnings || t("defaults.warnings") },
+    { id: "storage", label: t("tabs.storage"), content: storage || t("defaults.storage") },
   ];
 
   const [activeTab, setActiveTab] = useState(TABS[0].id);
@@ -63,7 +61,7 @@ export default function ProductTabs({ description, dosage, ingredients, warnings
               <button
                 type="button"
                 onClick={() => setOpenAccordion(open ? null : t.id)}
-                className="flex w-full items-center justify-between py-4 text-left"
+                className="flex w-full items-center justify-between py-4 text-start"
               >
                 <span className="font-headline text-[15px] font-bold text-neutral-900">{t.label}</span>
                 {open ? (

@@ -86,16 +86,19 @@ export type Database = {
         Row: {
           id: string
           label: string
+          label_ar: string | null
           sort_order: number
         }
         Insert: {
           id: string
           label: string
+          label_ar?: string | null
           sort_order?: number
         }
         Update: {
           id?: string
           label?: string
+          label_ar?: string | null
           sort_order?: number
         }
         Relationships: []

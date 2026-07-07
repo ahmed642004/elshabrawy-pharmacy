@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Pill, Plus, Bell } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useCart } from "@/lib/cart-context";
 import { formatEGP } from "@/lib/cart-totals";
 
@@ -37,17 +38,12 @@ const stockToneClasses: Record<StockState, string> = {
   out: "bg-danger-50 text-danger-600",
 };
 
-const stockLabel: Record<StockState, string> = {
-  in: "In stock",
-  low: "Low stock",
-  out: "Out of stock",
-};
-
 export default function ProductCard({ product, className = "" }: ProductCardProps) {
   const { slug, name, brand, sub, price, wasPrice, imageUrl, badge } = product;
   const stock = product.stock ?? "in";
   const outOfStock = stock === "out";
   const { addItem } = useCart();
+  const t = useTranslations("productCard");
 
   return (
     <div
@@ -67,7 +63,7 @@ export default function ProductCard({ product, className = "" }: ProductCardProp
           )}
           {badge && (
             <span
-              className={`absolute top-2.5 left-2.5 rounded-full px-2 py-0.5 text-[11px] font-semibold ${badgeToneClasses[badge.tone]}`}
+              className={`absolute start-2.5 top-2.5 rounded-full px-2 py-0.5 text-[11px] font-semibold ${badgeToneClasses[badge.tone]}`}
             >
               {badge.label}
             </span>
@@ -78,7 +74,7 @@ export default function ProductCard({ product, className = "" }: ProductCardProp
       <div className="flex flex-1 flex-col gap-1.5 px-4 pb-4">
         <div className="flex flex-wrap gap-1.5">
           <span className={`w-fit rounded-full px-2 py-0.5 text-[11px] font-semibold ${stockToneClasses[stock]}`}>
-            {stockLabel[stock]}
+            {t(`stock.${stock}`)}
           </span>
         </div>
 
@@ -92,12 +88,12 @@ export default function ProductCard({ product, className = "" }: ProductCardProp
           <div>
             <span className="font-headline text-[17px] font-extrabold text-neutral-900">{formatEGP(price)}</span>
             {wasPrice != null && (
-              <span className="ml-1.5 text-xs text-neutral-400 line-through">{formatEGP(wasPrice)}</span>
+              <span className="ms-1.5 text-xs text-neutral-400 line-through">{formatEGP(wasPrice)}</span>
             )}
           </div>
           <button
             type="button"
-            aria-label={outOfStock ? `Notify me when ${name} is back in stock` : `Add ${name} to cart`}
+            aria-label={outOfStock ? t("notifyMe", { name }) : t("addToCart", { name })}
             disabled={outOfStock}
             onClick={() => addItem({ slug, name, brand, price, stock })}
             className={`relative z-20 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white transition-colors disabled:cursor-not-allowed ${

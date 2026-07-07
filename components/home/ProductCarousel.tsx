@@ -3,20 +3,26 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import ProductCard, { type Product } from "@/components/ProductCard";
 
 export default function ProductCarousel({ products }: { products: Product[] }) {
   const router = useRouter();
+  const t = useTranslations("home.popular");
   const trackRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
 
+  // Under dir="rtl" the browser reports scrollLeft as 0 at the start and
+  // increasingly NEGATIVE toward the end, so both the position checks and
+  // the scroll direction must be direction-aware.
   const updateScrollState = useCallback(() => {
     const el = trackRef.current;
     if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 4);
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+    const scrolled = Math.abs(el.scrollLeft);
+    setCanScrollPrev(scrolled > 4);
+    setCanScrollNext(scrolled + el.clientWidth < el.scrollWidth - 4);
   }, []);
 
   useEffect(() => {
@@ -34,36 +40,37 @@ export default function ProductCarousel({ products }: { products: Product[] }) {
   function scroll(direction: -1 | 1) {
     const el = trackRef.current;
     if (!el) return;
-    el.scrollBy({ left: direction * el.clientWidth * 0.8, behavior: "smooth" });
+    const rtl = getComputedStyle(el).direction === "rtl";
+    el.scrollBy({ left: (rtl ? -direction : direction) * el.clientWidth * 0.8, behavior: "smooth" });
   }
 
   return (
     <div>
       <div className="mb-4 flex items-center justify-between gap-3">
         <h2 className="m-0 font-headline text-xl font-extrabold tracking-tight text-neutral-900 md:text-2xl">
-          Popular right now
+          {t("title")}
         </h2>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={() => router.push("/category")}>
-            View all <ArrowRight className="h-[15px] w-[15px]" />
+            {t("viewAll")} <ArrowRight className="h-[15px] w-[15px] rtl:rotate-180" />
           </Button>
           <button
             type="button"
-            aria-label="Scroll to previous products"
+            aria-label={t("prevAria")}
             onClick={() => scroll(-1)}
-            disabled={!canScrollLeft}
+            disabled={!canScrollPrev}
             className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
           >
-            <ChevronLeft className="h-[18px] w-[18px]" />
+            <ChevronLeft className="h-[18px] w-[18px] rtl:rotate-180" />
           </button>
           <button
             type="button"
-            aria-label="Scroll to next products"
+            aria-label={t("nextAria")}
             onClick={() => scroll(1)}
-            disabled={!canScrollRight}
+            disabled={!canScrollNext}
             className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
           >
-            <ChevronRight className="h-[18px] w-[18px]" />
+            <ChevronRight className="h-[18px] w-[18px] rtl:rotate-180" />
           </button>
         </div>
       </div>

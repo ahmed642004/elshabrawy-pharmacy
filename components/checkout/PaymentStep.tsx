@@ -1,6 +1,7 @@
 "use client";
 
 import { Banknote, CreditCard, Wallet, BadgeCheck } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { useCart } from "@/lib/cart-context";
@@ -14,10 +15,11 @@ export interface CardDetails {
   name: string;
 }
 
-export const PAYMENT_METHODS: { id: PaymentMethodId; label: string; icon: typeof Banknote }[] = [
-  { id: "cod", label: "Cash on delivery", icon: Banknote },
-  { id: "card", label: "Credit / debit card", icon: CreditCard },
-  { id: "wallet", label: "Mobile wallet", icon: Wallet },
+// Labels come from the checkout.methods.* messages, keyed by id.
+export const PAYMENT_METHODS: { id: PaymentMethodId; icon: typeof Banknote }[] = [
+  { id: "cod", icon: Banknote },
+  { id: "card", icon: CreditCard },
+  { id: "wallet", icon: Wallet },
 ];
 
 interface PaymentStepProps {
@@ -35,11 +37,13 @@ export default function PaymentStep({
   errors,
   onCardChange,
 }: PaymentStepProps) {
+  const t = useTranslations("checkout");
+  const tCart = useTranslations("cart");
   const { promoCode, setPromoCode, promoApplied, applyPromo } = useCart();
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="m-0 font-headline text-xl font-extrabold text-neutral-900">Payment method</h2>
+      <h2 className="m-0 font-headline text-xl font-extrabold text-neutral-900">{t("paymentTitle")}</h2>
 
       <div className="grid grid-cols-3 gap-3">
         {PAYMENT_METHODS.map((pm) => {
@@ -55,7 +59,7 @@ export default function PaymentStep({
               }`}
             >
               <Icon className={`h-[22px] w-[22px] ${selected ? "text-primary-500" : "text-neutral-500"}`} />
-              <span className="font-label text-[13.5px] font-semibold text-neutral-900">{pm.label}</span>
+              <span className="font-label text-[13.5px] font-semibold text-neutral-900">{t(`methods.${pm.id}`)}</span>
             </button>
           );
         })}
@@ -65,7 +69,7 @@ export default function PaymentStep({
         <div className="flex flex-col gap-3.5 rounded-[14px] border border-neutral-200 bg-white p-4.5">
           <div>
             <Input
-              placeholder="Card number"
+              placeholder={t("cardNumber")}
               value={card.number}
               onChange={(e) => onCardChange("number", e.target.value)}
             />
@@ -73,29 +77,29 @@ export default function PaymentStep({
           </div>
           <div className="grid grid-cols-2 gap-3.5">
             <div>
-              <Input placeholder="MM / YY" value={card.expiry} onChange={(e) => onCardChange("expiry", e.target.value)} />
+              <Input placeholder={t("expiry")} value={card.expiry} onChange={(e) => onCardChange("expiry", e.target.value)} />
               {errors.expiry && <div className="mt-1 text-xs text-danger-500">{errors.expiry}</div>}
             </div>
             <div>
-              <Input placeholder="CVV" value={card.cvv} onChange={(e) => onCardChange("cvv", e.target.value)} />
+              <Input placeholder={t("cvv")} value={card.cvv} onChange={(e) => onCardChange("cvv", e.target.value)} />
               {errors.cvv && <div className="mt-1 text-xs text-danger-500">{errors.cvv}</div>}
             </div>
           </div>
-          <Input placeholder="Name on card" value={card.name} onChange={(e) => onCardChange("name", e.target.value)} />
+          <Input placeholder={t("nameOnCard")} value={card.name} onChange={(e) => onCardChange("name", e.target.value)} />
         </div>
       )}
 
       {promoApplied ? (
         <div className="flex items-center gap-2 text-[13.5px] font-semibold text-secondary-600">
-          <BadgeCheck className="h-4 w-4" /> Promo code WELCOME20 applied
+          <BadgeCheck className="h-4 w-4" /> {t("promoApplied")}
         </div>
       ) : (
         <div className="flex gap-2">
           <div className="flex-1">
-            <Input placeholder="Promo code" value={promoCode} onChange={(e) => setPromoCode(e.target.value)} />
+            <Input placeholder={tCart("promoPlaceholder")} value={promoCode} onChange={(e) => setPromoCode(e.target.value)} />
           </div>
           <Button variant="outlined" size="md" onClick={applyPromo}>
-            Apply
+            {tCart("apply")}
           </Button>
         </div>
       )}

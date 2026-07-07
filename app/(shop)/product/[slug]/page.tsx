@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronRight } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import ProductGallery from "@/components/product/ProductGallery";
 import ProductPurchasePanel from "@/components/product/ProductPurchasePanel";
 import ProductTabs from "@/components/product/ProductTabs";
@@ -17,17 +18,20 @@ export default async function ProductPage({
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const related = await getRelatedProducts(product.category, product.slug);
+  const [related, tListing] = await Promise.all([
+    getRelatedProducts(product.category, product.slug),
+    getTranslations("listing"),
+  ]);
 
   return (
     <main className="mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-8 px-4 py-4 md:gap-10 md:px-10 md:py-8">
       <div className="flex items-center gap-1.5 text-[13px] text-neutral-500">
         <Link href="/" className="hover:text-neutral-700">
-          Home
+          {tListing("breadcrumbHome")}
         </Link>
-        <ChevronRight className="h-3.5 w-3.5" />
+        <ChevronRight className="h-3.5 w-3.5 rtl:rotate-180" />
         <span>{product.categoryLabel}</span>
-        <ChevronRight className="h-3.5 w-3.5" />
+        <ChevronRight className="h-3.5 w-3.5 rtl:rotate-180" />
         <span className="font-semibold text-neutral-900">{product.name}</span>
       </div>
 

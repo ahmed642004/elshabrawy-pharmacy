@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, MapPin, Package, Pencil, PlusCircle, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
@@ -29,32 +30,33 @@ function AddressFields({
   onChange: (field: keyof AddressForm, value: string) => void;
   errors: Partial<Record<keyof AddressForm, string>>;
 }) {
+  const t = useTranslations("account");
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <Input
-            placeholder="Recipient name"
+            placeholder={t("recipientPlaceholder")}
             value={form.recipient}
             onChange={(e) => onChange("recipient", e.target.value)}
           />
           {errors.recipient && <div className="mt-1 text-xs text-danger-500">{errors.recipient}</div>}
         </div>
         <div>
-          <Input placeholder="Phone number" value={form.phone} onChange={(e) => onChange("phone", e.target.value)} />
+          <Input placeholder={t("phonePlaceholder")} value={form.phone} onChange={(e) => onChange("phone", e.target.value)} />
           {errors.phone && <div className="mt-1 text-xs text-danger-500">{errors.phone}</div>}
         </div>
       </div>
       <div>
         <Input
-          placeholder="Street address, building, apartment"
+          placeholder={t("streetPlaceholder")}
           value={form.street}
           onChange={(e) => onChange("street", e.target.value)}
         />
         {errors.street && <div className="mt-1 text-xs text-danger-500">{errors.street}</div>}
       </div>
       <div>
-        <Input placeholder="City / area" value={form.city} onChange={(e) => onChange("city", e.target.value)} />
+        <Input placeholder={t("cityPlaceholder")} value={form.city} onChange={(e) => onChange("city", e.target.value)} />
         {errors.city && <div className="mt-1 text-xs text-danger-500">{errors.city}</div>}
       </div>
     </div>
@@ -63,6 +65,7 @@ function AddressFields({
 
 export default function AccountClient({ account }: { account: AccountData }) {
   const router = useRouter();
+  const t = useTranslations("account");
 
   const [fullName, setFullName] = useState(account.fullName);
   const [phone, setPhone] = useState(account.phone);
@@ -87,7 +90,7 @@ export default function AccountClient({ account }: { account: AccountData }) {
       setProfileSaved(true);
       router.refresh();
     } catch {
-      setProfileError("Couldn't save your details. Please try again.");
+      setProfileError(t("profileError"));
     } finally {
       setSavingProfile(false);
     }
@@ -106,10 +109,10 @@ export default function AccountClient({ account }: { account: AccountData }) {
 
   function validateAddress(): Partial<Record<keyof AddressForm, string>> {
     const errors: Partial<Record<keyof AddressForm, string>> = {};
-    if (!addressForm.recipient.trim()) errors.recipient = "Recipient name is required";
-    if (!addressForm.phone.trim()) errors.phone = "Phone number is required";
-    if (!addressForm.street.trim()) errors.street = "Address is required";
-    if (!addressForm.city.trim()) errors.city = "City / area is required";
+    if (!addressForm.recipient.trim()) errors.recipient = t("addressErrors.recipient");
+    if (!addressForm.phone.trim()) errors.phone = t("addressErrors.phone");
+    if (!addressForm.street.trim()) errors.street = t("addressErrors.street");
+    if (!addressForm.city.trim()) errors.city = t("addressErrors.city");
     return errors;
   }
 
@@ -127,7 +130,7 @@ export default function AccountClient({ account }: { account: AccountData }) {
       setAddressFormFor(null);
       router.refresh();
     } catch {
-      setAddressErrors({ city: "Couldn't save this address. Please try again." });
+      setAddressErrors({ city: t("addressErrors.saveFailed") });
     } finally {
       setSavingAddress(false);
     }
@@ -156,20 +159,20 @@ export default function AccountClient({ account }: { account: AccountData }) {
   return (
     <div className="flex flex-col gap-5">
       <div className="rounded-[20px] border border-neutral-200 bg-white p-5 shadow-sm">
-        <h2 className="m-0 mb-4 font-headline text-lg font-bold text-neutral-900">Profile</h2>
+        <h2 className="m-0 mb-4 font-headline text-lg font-bold text-neutral-900">{t("profile")}</h2>
         <div className="flex flex-col gap-3">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1.5 block font-label text-xs font-semibold text-neutral-500">Full name</label>
-              <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your name" />
+              <label className="mb-1.5 block font-label text-xs font-semibold text-neutral-500">{t("fullName")}</label>
+              <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder={t("fullNamePlaceholder")} />
             </div>
             <div>
-              <label className="mb-1.5 block font-label text-xs font-semibold text-neutral-500">Phone</label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone number" />
+              <label className="mb-1.5 block font-label text-xs font-semibold text-neutral-500">{t("phone")}</label>
+              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("phonePlaceholder")} />
             </div>
           </div>
           <div>
-            <label className="mb-1.5 block font-label text-xs font-semibold text-neutral-500">Email</label>
+            <label className="mb-1.5 block font-label text-xs font-semibold text-neutral-500">{t("email")}</label>
             <Input value={account.email} disabled className="bg-neutral-50 text-neutral-500" />
           </div>
           {profileError && (
@@ -177,11 +180,11 @@ export default function AccountClient({ account }: { account: AccountData }) {
           )}
           <div className="flex items-center gap-3">
             <Button variant="primary" size="md" disabled={savingProfile} onClick={handleSaveProfile}>
-              {savingProfile ? "Saving…" : "Save changes"}
+              {savingProfile ? t("saving") : t("saveChanges")}
             </Button>
             {profileSaved && (
               <span className="flex items-center gap-1 text-sm font-semibold text-success-600">
-                <Check className="h-4 w-4" /> Saved
+                <Check className="h-4 w-4" /> {t("saved")}
               </span>
             )}
           </div>
@@ -190,14 +193,14 @@ export default function AccountClient({ account }: { account: AccountData }) {
 
       <div className="rounded-[20px] border border-neutral-200 bg-white p-5 shadow-sm">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="m-0 font-headline text-lg font-bold text-neutral-900">Saved addresses</h2>
+          <h2 className="m-0 font-headline text-lg font-bold text-neutral-900">{t("savedAddresses")}</h2>
           {addressFormFor !== "new" && (
             <button
               type="button"
               onClick={() => openAddressForm("new")}
               className="flex items-center gap-1.5 font-label text-sm font-semibold text-primary-600"
             >
-              <PlusCircle className="h-4 w-4" /> Add address
+              <PlusCircle className="h-4 w-4" /> {t("addAddress")}
             </button>
           )}
         </div>
@@ -205,7 +208,7 @@ export default function AccountClient({ account }: { account: AccountData }) {
         {account.addresses.length === 0 && addressFormFor !== "new" && (
           <div className="flex flex-col items-center gap-2 py-6 text-center">
             <MapPin className="h-7 w-7 text-neutral-300" />
-            <div className="text-sm text-neutral-500">No saved addresses yet — add one to speed up checkout.</div>
+            <div className="text-sm text-neutral-500">{t("noAddresses")}</div>
           </div>
         )}
 
@@ -224,10 +227,10 @@ export default function AccountClient({ account }: { account: AccountData }) {
                     />
                     <div className="flex gap-2.5">
                       <Button variant="outlined" size="sm" onClick={() => setAddressFormFor(null)}>
-                        Cancel
+                        {t("cancel")}
                       </Button>
                       <Button variant="primary" size="sm" disabled={savingAddress} onClick={handleSaveAddress}>
-                        {savingAddress ? "Saving…" : "Save address"}
+                        {savingAddress ? t("saving") : t("saveAddress")}
                       </Button>
                     </div>
                   </div>
@@ -236,7 +239,7 @@ export default function AccountClient({ account }: { account: AccountData }) {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-headline text-sm font-bold text-neutral-900">{address.recipient}</span>
-                        {address.isDefault && <Badge tone="primary">Default</Badge>}
+                        {address.isDefault && <Badge tone="primary">{t("defaultBadge")}</Badge>}
                       </div>
                       <div className="mt-0.5 text-[13px] text-neutral-500">
                         {address.street}, {address.city}
@@ -249,21 +252,21 @@ export default function AccountClient({ account }: { account: AccountData }) {
                           onClick={() => handleSetDefault(address.id)}
                           className="mt-1.5 font-label text-[12.5px] font-semibold text-primary-600 disabled:opacity-50"
                         >
-                          Set as default
+                          {t("setDefault")}
                         </button>
                       )}
                     </div>
                     <div className="flex shrink-0 gap-1.5">
                       <IconButton
                         icon={Pencil}
-                        aria-label={`Edit address for ${address.recipient}`}
+                        aria-label={t("editAddress", { name: address.recipient })}
                         size="sm"
                         disabled={pending}
                         onClick={() => openAddressForm(address)}
                       />
                       <IconButton
                         icon={Trash2}
-                        aria-label={`Delete address for ${address.recipient}`}
+                        aria-label={t("deleteAddress", { name: address.recipient })}
                         size="sm"
                         tone="danger"
                         disabled={pending}
@@ -286,10 +289,10 @@ export default function AccountClient({ account }: { account: AccountData }) {
                 />
                 <div className="flex gap-2.5">
                   <Button variant="outlined" size="sm" onClick={() => setAddressFormFor(null)}>
-                    Cancel
+                    {t("cancel")}
                   </Button>
                   <Button variant="primary" size="sm" disabled={savingAddress} onClick={handleSaveAddress}>
-                    {savingAddress ? "Saving…" : "Save address"}
+                    {savingAddress ? t("saving") : t("saveAddress")}
                   </Button>
                 </div>
               </div>
@@ -307,8 +310,8 @@ export default function AccountClient({ account }: { account: AccountData }) {
             <Package className="h-5 w-5 text-primary-500" />
           </span>
           <div>
-            <div className="font-headline text-sm font-bold text-neutral-900">My orders</div>
-            <div className="text-[13px] text-neutral-500">Track deliveries and see past purchases</div>
+            <div className="font-headline text-sm font-bold text-neutral-900">{t("myOrders")}</div>
+            <div className="text-[13px] text-neutral-500">{t("myOrdersHint")}</div>
           </div>
         </div>
       </Link>
