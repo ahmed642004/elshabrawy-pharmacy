@@ -364,13 +364,24 @@ export async function getMyOrders(): Promise<MyOrdersResult> {
 export interface AdminInventoryItem {
   id: string;
   name: string;
+  brand: string | null;
+  sub: string | null;
   sku: string | null;
   categoryId: string | null;
   categoryLabel: string;
   price: number;
+  wasPrice: number | null;
   stockCount: number;
   lowStockThreshold: number;
   stockState: StockState;
+  badgeLabel: string | null;
+  badgeTone: BadgeTone | null;
+  isPopular: boolean;
+  description: string | null;
+  dosage: string | null;
+  ingredients: string | null;
+  warnings: string | null;
+  storage: string | null;
   imageUrl?: string;
 }
 
@@ -379,7 +390,7 @@ export async function getAdminInventory(): Promise<AdminInventoryItem[]> {
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, name, sku, category_id, price, stock_count, low_stock_threshold, stock, categories(label), product_images(url, position)"
+      "id, name, brand, sub, sku, category_id, price, was_price, stock_count, low_stock_threshold, stock, badge_label, badge_tone, is_popular, description, dosage, ingredients, warnings, storage, categories(label), product_images(url, position)"
     )
     .order("name");
   if (error) throw error;
@@ -389,13 +400,24 @@ export async function getAdminInventory(): Promise<AdminInventoryItem[]> {
     return {
       id: row.id,
       name: row.name,
+      brand: row.brand,
+      sub: row.sub,
       sku: row.sku,
       categoryId: row.category_id,
       categoryLabel: row.categories?.label ?? "Uncategorized",
       price: Number(row.price),
+      wasPrice: row.was_price != null ? Number(row.was_price) : null,
       stockCount: row.stock_count,
       lowStockThreshold: row.low_stock_threshold,
       stockState: row.stock,
+      badgeLabel: row.badge_label,
+      badgeTone: (row.badge_tone as BadgeTone | null) ?? null,
+      isPopular: row.is_popular,
+      description: row.description,
+      dosage: row.dosage,
+      ingredients: row.ingredients,
+      warnings: row.warnings,
+      storage: row.storage,
       imageUrl: thumbnail?.url,
     };
   });

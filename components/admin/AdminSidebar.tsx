@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Package, Boxes, Plus, Stethoscope } from "lucide-react";
+import { LayoutDashboard, Package, Boxes, Plus, Stethoscope, Store } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
@@ -17,8 +17,8 @@ function Logo() {
         <Plus className="h-[18px] w-[18px] text-white" strokeWidth={2.5} />
       </span>
       <div className="leading-tight">
-        <div className="font-headline text-base font-bold text-neutral-900">
-          Elshabrawy<span className="text-primary-500">Pharmacy</span>
+        <div className="font-headline text-[15px] leading-tight font-bold text-neutral-900">
+          Elshabrawy <span className="text-primary-500">Pharmacy</span>
         </div>
         <div className="font-label text-[10px] font-semibold tracking-wide text-neutral-400 uppercase">
           Ops dashboard
@@ -37,8 +37,15 @@ export default function AdminSidebar() {
     <>
       {/* Mobile: top bar with horizontal nav pills instead of a sidebar. */}
       <div className="flex shrink-0 flex-col border-b border-neutral-200 bg-white md:hidden">
-        <div className="px-4 pt-3 pb-2">
+        <div className="flex items-center justify-between px-4 pt-3 pb-2">
           <Logo />
+          <Link
+            href="/"
+            className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-neutral-300 px-3 font-label text-xs font-semibold text-neutral-600"
+          >
+            <Store className="h-3.5 w-3.5" strokeWidth={1.75} />
+            <span>Store</span>
+          </Link>
         </div>
         <nav className="flex gap-1.5 overflow-x-auto px-4 pb-3">
           {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
@@ -82,6 +89,14 @@ export default function AdminSidebar() {
         </nav>
 
         <div className="flex-1" />
+
+        <Link
+          href="/"
+          className="mb-3 flex h-10 items-center gap-2.5 rounded-[10px] border border-neutral-300 px-3 font-label text-sm font-semibold text-neutral-600 transition-colors hover:bg-neutral-100"
+        >
+          <Store className="h-[18px] w-[18px]" strokeWidth={1.75} />
+          <span>View store</span>
+        </Link>
 
         <div className="flex flex-col gap-2 rounded-[14px] border border-primary-100 bg-tertiary-100 p-3.5">
           <div className="flex items-center gap-2">

@@ -206,23 +206,60 @@ function slugify(name: string): string {
   );
 }
 
+const BADGE_TONES = ["sale", "bestseller", "new"] as const;
+type BadgeToneValue = (typeof BADGE_TONES)[number];
+
+// Shared parse of the catalog fields the admin product form submits, used by
+// both addProduct and updateProduct so the two write the same column set.
+// Optional text fields collapse empty strings to null; was_price only sticks
+// when it's a valid positive number.
+function parseProductFields(formData: FormData) {
+  const text = (key: string) => String(formData.get(key) ?? "").trim() || null;
+
+  const wasPriceRaw = Number(formData.get("wasPrice"));
+  const wasPrice = Number.isFinite(wasPriceRaw) && wasPriceRaw > 0 ? wasPriceRaw : null;
+
+  const badgeLabel = text("badgeLabel");
+  const badgeToneRaw = String(formData.get("badgeTone") ?? "").trim();
+  const badgeTone = BADGE_TONES.includes(badgeToneRaw as BadgeToneValue)
+    ? (badgeToneRaw as BadgeToneValue)
+    : null;
+
+  return {
+    name: String(formData.get("name") ?? "").trim(),
+    brand: text("brand"),
+    sub: text("sub"),
+    category_id: text("categoryId"),
+    sku: text("sku"),
+    price: Number(formData.get("price")),
+    was_price: wasPrice,
+    // A badge only makes sense with both a label and a tone; drop both if either
+    // is missing so a half-set badge never renders.
+    badge_label: badgeLabel && badgeTone ? badgeLabel : null,
+    badge_tone: badgeLabel && badgeTone ? badgeTone : null,
+    is_popular: formData.get("isPopular") === "on",
+    description: text("description"),
+    dosage: text("dosage"),
+    ingredients: text("ingredients"),
+    warnings: text("warnings"),
+    storage: text("storage"),
+  };
+}
+
 export async function addProduct(formData: FormData): Promise<{ slug: string }> {
   await assertAdmin();
   const supabase = await createClient();
 
-  const name = String(formData.get("name") ?? "").trim();
-  const categoryId = String(formData.get("categoryId") ?? "").trim() || null;
-  const sku = String(formData.get("sku") ?? "").trim() || null;
-  const price = Number(formData.get("price"));
+  const fields = parseProductFields(formData);
   const stockCount = Number(formData.get("stockCount"));
   const lowStockThreshold = Number(formData.get("lowStockThreshold"));
   const image = formData.get("image");
 
-  if (!name || !Number.isFinite(price)) throw new Error("Name and price are required");
+  if (!fields.name || !Number.isFinite(fields.price)) throw new Error("Name and price are required");
 
   // products.slug is unique — derive one from the name and disambiguate on
   // collision, mirroring create_order()'s generated-but-unique order_number.
-  const baseSlug = slugify(name);
+  const baseSlug = slugify(fields.name);
   let slug = baseSlug;
   for (let suffix = 2; ; suffix++) {
     const { data: existing } = await supabase.from("products").select("id").eq("slug", slug).maybeSingle();
@@ -233,11 +270,8 @@ export async function addProduct(formData: FormData): Promise<{ slug: string }> 
   const { data: inserted, error } = await supabase
     .from("products")
     .insert({
-      name,
+      ...fields,
       slug,
-      category_id: categoryId,
-      sku,
-      price,
       stock_count: Number.isFinite(stockCount) ? stockCount : 0,
       low_stock_threshold: Number.isFinite(lowStockThreshold) ? lowStockThreshold : 10,
     })
@@ -323,15 +357,12 @@ export async function updateProduct(formData: FormData): Promise<void> {
   const supabase = await createClient();
 
   const id = String(formData.get("id") ?? "");
-  const name = String(formData.get("name") ?? "").trim();
-  const categoryId = String(formData.get("categoryId") ?? "").trim() || null;
-  const sku = String(formData.get("sku") ?? "").trim() || null;
-  const price = Number(formData.get("price"));
+  const fields = parseProductFields(formData);
   const stockCount = Number(formData.get("stockCount"));
   const lowStockThreshold = Number(formData.get("lowStockThreshold"));
   const image = formData.get("image");
 
-  if (!id || !name || !Number.isFinite(price)) throw new Error("Name and price are required");
+  if (!id || !fields.name || !Number.isFinite(fields.price)) throw new Error("Name and price are required");
 
   // The slug deliberately stays unchanged on rename — it's the product's
   // public URL identity and may be sitting in customers' bookmarks, carts,
@@ -339,10 +370,7 @@ export async function updateProduct(formData: FormData): Promise<void> {
   const { data: updated, error } = await supabase
     .from("products")
     .update({
-      name,
-      category_id: categoryId,
-      sku,
-      price,
+      ...fields,
       stock_count: Number.isFinite(stockCount) ? Math.max(0, stockCount) : 0,
       low_stock_threshold: Number.isFinite(lowStockThreshold) ? Math.max(0, lowStockThreshold) : 10,
     })
