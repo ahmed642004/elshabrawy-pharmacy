@@ -23,7 +23,8 @@ interface FilterGroupsProps {
 
 const groupTitleClass =
   "mb-2.5 font-headline text-[12.5px] font-bold tracking-wide text-neutral-900 uppercase";
-const rowClass = "flex min-h-8 cursor-pointer items-center gap-2.5 py-1.5";
+const rowClass =
+  "flex min-h-8 cursor-pointer items-center gap-2.5 rounded-[8px] px-1.5 py-1.5 transition-colors hover:bg-neutral-50";
 const checkboxClass = "h-[18px] w-[18px] shrink-0 cursor-pointer accent-primary-500";
 const rowLabelClass = "text-sm text-neutral-700";
 

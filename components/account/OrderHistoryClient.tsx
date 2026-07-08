@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Check, ChevronDown, PackageSearch, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import OrderStatusBadge from "@/components/admin/OrderStatusBadge";
+import { cancelMyOrder, getReorderItems } from "@/lib/actions";
 import { formatEGP } from "@/lib/cart-totals";
+import { useCart } from "@/lib/cart-context";
+import { useToast } from "@/components/ui/ToastProvider";
 import type { AdminOrder } from "@/lib/queries";
 
 const TRACKING_STEPS = ["placed", "confirmed", "delivered"] as const;
@@ -61,7 +65,63 @@ export default function OrderHistoryClient({ orders }: { orders: AdminOrder[] })
   const tCart = useTranslations("cart");
   const locale = useLocale();
   const dateLocale = locale === "ar" ? "ar-EG" : "en-US";
+  const router = useRouter();
+  const { addItem } = useCart();
+  const { showToast } = useToast();
   const [expandedId, setExpandedId] = useState<string | null>(orders[0]?.id ?? null);
+  const [confirmingCancelId, setConfirmingCancelId] = useState<string | null>(null);
+  const [cancelErrorId, setCancelErrorId] = useState<string | null>(null);
+  const [reorderingId, setReorderingId] = useState<string | null>(null);
+  const [cancelPending, startCancelTransition] = useTransition();
+
+  // Two-tap confirm auto-resets after a few seconds so a stray later click
+  // elsewhere on the page can't land on an armed "confirm cancel" button.
+  useEffect(() => {
+    if (!confirmingCancelId) return;
+    const timeout = setTimeout(() => setConfirmingCancelId(null), 4000);
+    return () => clearTimeout(timeout);
+  }, [confirmingCancelId]);
+
+  function handleCancelClick(orderId: string) {
+    if (confirmingCancelId !== orderId) {
+      setConfirmingCancelId(orderId);
+      return;
+    }
+    setConfirmingCancelId(null);
+    setCancelErrorId(null);
+    startCancelTransition(async () => {
+      try {
+        await cancelMyOrder(orderId);
+        router.refresh();
+      } catch {
+        setCancelErrorId(orderId);
+      }
+    });
+  }
+
+  async function handleReorder(order: AdminOrder) {
+    setReorderingId(order.id);
+    try {
+      const slugs = order.items.map((i) => i.slug).filter((s): s is string => !!s);
+      const live = await getReorderItems(slugs);
+      let added = 0;
+      for (const item of live) {
+        if (item.stock === "out") continue;
+        const qty = order.items.find((i) => i.slug === item.slug)?.qty ?? 1;
+        addItem({ slug: item.slug, name: item.name, brand: item.brand ?? undefined, price: item.price, stock: item.stock }, qty);
+        added += 1;
+      }
+      if (added === 0) {
+        showToast(t("reorderNone"));
+        return;
+      }
+      const skipped = slugs.length - added;
+      showToast(skipped > 0 ? `${t("reorderAdded", { count: added })} · ${t("reorderSkipped", { count: skipped })}` : t("reorderAdded", { count: added }));
+      router.push("/cart");
+    } finally {
+      setReorderingId(null);
+    }
+  }
 
   if (orders.length === 0) {
     return (
@@ -179,6 +239,36 @@ export default function OrderHistoryClient({ orders }: { orders: AdminOrder[] })
                     </div>
                   </div>
                 </div>
+
+                {(order.status === "placed" || order.status === "delivered" || order.status === "cancelled") && (
+                  <div className="flex flex-col gap-2 border-t border-neutral-100 pt-4">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      {order.status === "placed" && (
+                        <Button
+                          variant="outlined"
+                          size="md"
+                          disabled={cancelPending}
+                          onClick={() => handleCancelClick(order.id)}
+                        >
+                          {confirmingCancelId === order.id ? t("cancelConfirm") : t("cancelOrder")}
+                        </Button>
+                      )}
+                      {(order.status === "delivered" || order.status === "cancelled") && (
+                        <Button
+                          variant="outlined"
+                          size="md"
+                          disabled={reorderingId === order.id}
+                          onClick={() => handleReorder(order)}
+                        >
+                          {reorderingId === order.id ? t("reordering") : t("reorder")}
+                        </Button>
+                      )}
+                    </div>
+                    {cancelErrorId === order.id && (
+                      <div className="text-xs text-danger-500">{t("cancelFailed")}</div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

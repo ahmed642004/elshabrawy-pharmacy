@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Pill, Plus, Bell } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCart } from "@/lib/cart-context";
+import { useToast } from "@/components/ui/ToastProvider";
 import { formatEGP } from "@/lib/cart-totals";
 
 export type BadgeTone = "sale" | "bestseller" | "new";
@@ -43,11 +44,12 @@ export default function ProductCard({ product, className = "" }: ProductCardProp
   const stock = product.stock ?? "in";
   const outOfStock = stock === "out";
   const { addItem } = useCart();
+  const { showToast } = useToast();
   const t = useTranslations("productCard");
 
   return (
     <div
-      className={`relative flex h-full flex-col overflow-hidden rounded-[14px] bg-white shadow-sm transition-shadow hover:shadow-md ${className}`}
+      className={`group relative flex h-full flex-col overflow-hidden rounded-[14px] bg-white shadow-sm transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-lg ${className}`}
     >
       <Link href={`/product/${slug}`} className="absolute inset-0 z-10" aria-label={name} />
 
@@ -55,7 +57,11 @@ export default function ProductCard({ product, className = "" }: ProductCardProp
         <div className="relative aspect-[4/3] overflow-hidden rounded-[10px]">
           {imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={imageUrl} alt={name} className="h-full w-full object-cover" />
+            <img
+              src={imageUrl}
+              alt={name}
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-neutral-100">
               <Pill className="h-8 w-8 text-neutral-300" strokeWidth={1.5} />
@@ -95,8 +101,11 @@ export default function ProductCard({ product, className = "" }: ProductCardProp
             type="button"
             aria-label={outOfStock ? t("notifyMe", { name }) : t("addToCart", { name })}
             disabled={outOfStock}
-            onClick={() => addItem({ slug, name, brand, price, stock })}
-            className={`relative z-20 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white transition-colors disabled:cursor-not-allowed ${
+            onClick={() => {
+              addItem({ slug, name, brand, price, stock });
+              showToast(t("addedToast", { name }));
+            }}
+            className={`relative z-20 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white transition-[background-color,transform] duration-150 hover:scale-105 active:scale-90 disabled:cursor-not-allowed ${
               outOfStock ? "bg-neutral-400" : "bg-primary-500 hover:bg-primary-600"
             }`}
           >

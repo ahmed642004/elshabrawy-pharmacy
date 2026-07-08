@@ -39,7 +39,7 @@ export default function PaymentStep({
 }: PaymentStepProps) {
   const t = useTranslations("checkout");
   const tCart = useTranslations("cart");
-  const { promoCode, setPromoCode, promoApplied, applyPromo } = useCart();
+  const { promoInput, setPromoInput, promo, promoError, applyPromo } = useCart();
 
   return (
     <div className="flex flex-col gap-4">
@@ -89,18 +89,25 @@ export default function PaymentStep({
         </div>
       )}
 
-      {promoApplied ? (
+      {promo ? (
         <div className="flex items-center gap-2 text-[13.5px] font-semibold text-secondary-600">
-          <BadgeCheck className="h-4 w-4" /> {t("promoApplied")}
+          <BadgeCheck className="h-4 w-4" /> {t("promoApplied", { code: promo.code })}
         </div>
       ) : (
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <Input placeholder={tCart("promoPlaceholder")} value={promoCode} onChange={(e) => setPromoCode(e.target.value)} />
+        <div className="flex flex-col gap-1.5">
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Input
+                placeholder={tCart("promoPlaceholder")}
+                value={promoInput}
+                onChange={(e) => setPromoInput(e.target.value)}
+              />
+            </div>
+            <Button variant="outlined" size="md" onClick={applyPromo}>
+              {tCart("apply")}
+            </Button>
           </div>
-          <Button variant="outlined" size="md" onClick={applyPromo}>
-            {tCart("apply")}
-          </Button>
+          {promoError && <div className="text-xs text-danger-500">{tCart("promoInvalid")}</div>}
         </div>
       )}
     </div>

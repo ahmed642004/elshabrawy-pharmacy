@@ -226,6 +226,7 @@ export type Database = {
           is_popular: boolean
           low_stock_threshold: number
           name: string
+          on_sale: boolean | null
           price: number
           rating: number | null
           review_count: number
@@ -251,6 +252,7 @@ export type Database = {
           is_popular?: boolean
           low_stock_threshold?: number
           name: string
+          on_sale?: boolean | null
           price: number
           rating?: number | null
           review_count?: number
@@ -276,6 +278,7 @@ export type Database = {
           is_popular?: boolean
           low_stock_threshold?: number
           name?: string
+          on_sale?: boolean | null
           price?: number
           rating?: number | null
           review_count?: number
@@ -322,6 +325,33 @@ export type Database = {
         }
         Relationships: []
       }
+      promo_codes: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          discount_egp: number
+          expires_at: string | null
+          min_subtotal: number
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          discount_egp: number
+          expires_at?: string | null
+          min_subtotal?: number
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          discount_egp?: number
+          expires_at?: string | null
+          min_subtotal?: number
+        }
+        Relationships: []
+      }
       reviews: {
         Row: {
           author_name: string
@@ -330,6 +360,7 @@ export type Database = {
           id: string
           product_id: string
           rating: number
+          user_id: string | null
         }
         Insert: {
           author_name: string
@@ -338,6 +369,7 @@ export type Database = {
           id?: string
           product_id: string
           rating: number
+          user_id?: string | null
         }
         Update: {
           author_name?: string
@@ -346,6 +378,7 @@ export type Database = {
           id?: string
           product_id?: string
           rating?: number
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -366,15 +399,13 @@ export type Database = {
         Args: { p_delta: number; p_product_id: string }
         Returns: undefined
       }
+      cancel_order: { Args: { p_order_id: string }; Returns: undefined }
       create_order: {
         Args: {
-          p_delivery_fee: number
-          p_discount: number
           p_items: Json
           p_payment_method: Database["public"]["Enums"]["payment_method"]
+          p_promo_code?: string
           p_shipping: Json
-          p_subtotal: number
-          p_total: number
         }
         Returns: string
       }
@@ -384,8 +415,22 @@ export type Database = {
           brand: string
         }[]
       }
+      get_pending_reviews: {
+        Args: never
+        Returns: {
+          slug: string
+          name: string
+          image_url: string
+        }[]
+      }
+      has_purchased: { Args: { p_product_slug: string }; Returns: boolean }
+      has_purchased_product: { Args: { p_product_id: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       replace_cart: { Args: { p_items: Json }; Returns: undefined }
+      validate_promo: {
+        Args: { p_code: string; p_subtotal: number }
+        Returns: number
+      }
     }
     Enums: {
       badge_tone: "sale" | "bestseller" | "new"

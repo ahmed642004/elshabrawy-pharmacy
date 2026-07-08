@@ -24,7 +24,7 @@ export default function ProductGallery({ name, images = [] }: { name: string; im
               type="button"
               onClick={() => setActiveIndex(i)}
               aria-label={t("showImage", { index: i + 1, name })}
-              className={`flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-neutral-100 md:h-[76px] md:w-[76px] ${
+              className={`flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-neutral-100 transition-[border-color,transform] duration-150 hover:scale-105 md:h-[76px] md:w-[76px] ${
                 i === activeIndex ? "border-2 border-primary-500" : "border border-neutral-300"
               }`}
             >
@@ -44,7 +44,11 @@ export default function ProductGallery({ name, images = [] }: { name: string; im
           aria-label={t("zoomIn", { name })}
           className="relative aspect-square flex-1 cursor-zoom-in overflow-hidden rounded-[20px] border border-neutral-200 bg-neutral-100"
         >
-          <div className="flex h-full w-full items-center justify-center">
+          <div
+            key={hasImages ? activeIndex : "ph"}
+            className="flex h-full w-full items-center justify-center"
+            style={{ animation: "ccFadeIn 250ms ease-out" }}
+          >
             {activeImage ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={activeImage} alt={name} className="h-full w-full object-cover" />
@@ -62,8 +66,9 @@ export default function ProductGallery({ name, images = [] }: { name: string; im
         <div
           onClick={() => setLightboxOpen(false)}
           className="fixed inset-0 z-[70] flex items-center justify-center bg-neutral-900/80 p-10"
+          style={{ animation: "ccOverlayIn 200ms ease-out" }}
         >
-          <div className="relative aspect-square w-[min(680px,90vw)]">
+          <div className="relative aspect-square w-[min(680px,90vw)]" style={{ animation: "ccScaleIn 220ms ease-out" }}>
             <div className="flex h-full w-full items-center justify-center rounded-[16px] bg-neutral-100">
               {activeImage ? (
                 // eslint-disable-next-line @next/next/no-img-element

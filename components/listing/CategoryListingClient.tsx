@@ -32,11 +32,13 @@ export default function CategoryListingClient({
   products,
   categories,
   brands,
+  offersMode = false,
 }: {
   initialCategoryId?: string;
   products: ListingProduct[];
   categories: CategoryRow[];
   brands: string[];
+  offersMode?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -88,7 +90,7 @@ export default function CategoryListingClient({
   // set — no client-side re-filtering needed.
   const activeCategory =
     selectedCategories.length === 1 ? categories.find((c) => c.id === selectedCategories[0]) : undefined;
-  const pageTitle = activeCategory ? categoryLabel(activeCategory, locale) : t("allProducts");
+  const pageTitle = offersMode ? t("offersTitle") : activeCategory ? categoryLabel(activeCategory, locale) : t("allProducts");
   const resultCountLabel = t("productCount", { count: products.length });
   const activeFilterCount = selectedCategories.length + selectedBrands.length + selectedPriceRanges.length;
 
@@ -179,11 +181,17 @@ export default function CategoryListingClient({
           ) : (
             <div className="flex flex-col items-center gap-3 rounded-[14px] border border-neutral-200 bg-white px-6 py-16 text-center">
               <SearchX className="h-9 w-9 text-neutral-300" />
-              <div className="font-headline text-[17px] font-bold text-neutral-900">{t("noMatch")}</div>
-              <div className="max-w-[320px] text-sm text-neutral-500">{t("noMatchHint")}</div>
-              <Button variant="outlined" size="sm" onClick={clearFilters}>
-                {t("clearAllFilters")}
-              </Button>
+              {offersMode && activeFilterCount === 0 ? (
+                <div className="font-headline text-[17px] font-bold text-neutral-900">{t("offersEmpty")}</div>
+              ) : (
+                <>
+                  <div className="font-headline text-[17px] font-bold text-neutral-900">{t("noMatch")}</div>
+                  <div className="max-w-[320px] text-sm text-neutral-500">{t("noMatchHint")}</div>
+                  <Button variant="outlined" size="sm" onClick={clearFilters}>
+                    {t("clearAllFilters")}
+                  </Button>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -191,8 +199,15 @@ export default function CategoryListingClient({
 
       {filterSheetOpen && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end md:hidden">
-          <div onClick={() => setFilterSheetOpen(false)} className="absolute inset-0 bg-neutral-900/40" />
-          <div className="relative flex max-h-[82vh] flex-col rounded-t-[20px] bg-white shadow-lg">
+          <div
+            onClick={() => setFilterSheetOpen(false)}
+            className="absolute inset-0 bg-neutral-900/40"
+            style={{ animation: "ccOverlayIn 200ms ease-out" }}
+          />
+          <div
+            className="relative flex max-h-[82vh] flex-col rounded-t-[20px] bg-white shadow-lg"
+            style={{ animation: "ccSheetUp 280ms cubic-bezier(0.32, 0.72, 0, 1)" }}
+          >
             <div className="flex shrink-0 items-center justify-between border-b border-neutral-200 px-5 py-4">
               <span className="font-headline text-[17px] font-extrabold text-neutral-900">{t("filters")}</span>
               <button

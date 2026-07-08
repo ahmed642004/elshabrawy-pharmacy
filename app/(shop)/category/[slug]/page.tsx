@@ -18,10 +18,16 @@ export default async function CategoryPage({
   const sp = await searchParams;
   const categories = await getCategories();
 
-  const initialCategoryId = resolveCategorySlug(
-    slug,
-    categories.map((c) => c.id)
-  );
+  // /category/offers isn't a real category — resolveCategorySlug() would
+  // return undefined for it — so it's special-cased to the on_sale filter
+  // instead of a category match. cat/brand/price/sort still compose on top.
+  const isOffers = slug === "offers";
+  const initialCategoryId = isOffers
+    ? undefined
+    : resolveCategorySlug(
+        slug,
+        categories.map((c) => c.id)
+      );
   const selectedCategories =
     sp.cat !== undefined ? parseArrayParam(sp.cat) : initialCategoryId ? [initialCategoryId] : [];
   const selectedBrands = parseArrayParam(sp.brand);
@@ -34,6 +40,7 @@ export default async function CategoryPage({
       brands: selectedBrands,
       priceRangeIds: selectedPriceRanges,
       sort,
+      onSale: isOffers,
     }),
     getBrands(),
   ]);
@@ -45,6 +52,7 @@ export default async function CategoryPage({
         products={products}
         categories={categories}
         brands={brands}
+        offersMode={isOffers}
       />
     </Suspense>
   );

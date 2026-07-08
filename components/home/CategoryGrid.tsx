@@ -42,10 +42,12 @@ export default async function CategoryGrid() {
               className="group relative aspect-square overflow-hidden rounded-[14px]"
             >
               <div className={`absolute inset-0 flex items-center justify-center ${tone.bg}`}>
-                <Icon className={`h-9 w-9 ${tone.fg}`} strokeWidth={1.5} />
+                <Icon className={`h-9 w-9 transition-transform duration-300 group-hover:scale-110 ${tone.fg}`} strokeWidth={1.5} />
               </div>
               <div className="absolute inset-0 bg-gradient-to-t from-neutral-900/70 via-neutral-900/5 to-transparent" />
-              <span className="absolute end-0 bottom-0 start-0 px-3 py-2.5 font-label text-[13px] font-semibold text-white">
+              {/* Second overlay fades in on hover (opacity, not background). */}
+              <div className="absolute inset-0 bg-gradient-to-t from-neutral-900/85 via-neutral-900/15 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+              <span className="absolute end-0 bottom-0 start-0 px-3 py-2.5 font-label text-[13px] font-semibold text-white transition-transform duration-300 group-hover:-translate-y-0.5">
                 {categoryLabel(category, locale)}
               </span>
             </Link>

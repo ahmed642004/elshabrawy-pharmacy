@@ -20,9 +20,11 @@ export default function ProductCarousel({ products }: { products: Product[] }) {
   const updateScrollState = useCallback(() => {
     const el = trackRef.current;
     if (!el) return;
+    // Tolerance must exceed the ~8px rest offset that snap-mandatory
+    // produces with the -mx-2/px-2 gutters (notably under RTL).
     const scrolled = Math.abs(el.scrollLeft);
-    setCanScrollPrev(scrolled > 4);
-    setCanScrollNext(scrolled + el.clientWidth < el.scrollWidth - 4);
+    setCanScrollPrev(scrolled > 12);
+    setCanScrollNext(scrolled + el.clientWidth < el.scrollWidth - 12);
   }, []);
 
   useEffect(() => {
@@ -75,15 +77,32 @@ export default function ProductCarousel({ products }: { products: Product[] }) {
         </div>
       </div>
 
-      <div
-        ref={trackRef}
-        className="-mx-2 flex snap-x snap-mandatory gap-[18px] overflow-x-auto scroll-smooth px-2 pb-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        {products.map((product) => (
-          <div key={product.slug} className="w-[200px] shrink-0 snap-start md:w-[240px]">
-            <ProductCard product={product} />
-          </div>
-        ))}
+      <div className="relative">
+        {/* Edge fade overlays hint at more content; they appear only when
+            scrollable in that direction. Tailwind gradient directions are
+            physical, so each logical edge needs its rtl: flip. */}
+        <div
+          aria-hidden
+          className={`pointer-events-none absolute inset-y-0 start-0 z-10 w-10 bg-gradient-to-r from-neutral-50 to-transparent transition-opacity duration-300 rtl:bg-gradient-to-l ${
+            canScrollPrev ? "opacity-100" : "opacity-0"
+          }`}
+        />
+        <div
+          aria-hidden
+          className={`pointer-events-none absolute inset-y-0 end-0 z-10 w-10 bg-gradient-to-l from-neutral-50 to-transparent transition-opacity duration-300 rtl:bg-gradient-to-r ${
+            canScrollNext ? "opacity-100" : "opacity-0"
+          }`}
+        />
+        <div
+          ref={trackRef}
+          className="-mx-2 flex snap-x snap-mandatory gap-[18px] overflow-x-auto scroll-smooth px-2 pb-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {products.map((product) => (
+            <div key={product.slug} className="w-[200px] shrink-0 snap-start md:w-[240px]">
+              <ProductCard product={product} />
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

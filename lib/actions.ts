@@ -3,34 +3,98 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminSession } from "@/lib/queries";
-import type { CartItem } from "@/lib/cart-context";
 import type { Enums } from "@/lib/database.types";
 
 interface CreateOrderInput {
-  items: CartItem[];
-  subtotal: number;
-  deliveryFee: number;
-  discount: number;
-  total: number;
+  // Only slug + qty travel to the server — create_order() derives every
+  // price/subtotal/discount/total itself from the current products row, so
+  // the client can no longer dictate what an order costs (see migration
+  // 0015_secure_create_order.sql).
+  items: { slug: string; qty: number }[];
   paymentMethod: Enums<"payment_method">;
   shipping: { fullName: string; phone: string; address: string; city: string; notes?: string };
+  // Re-validated server-side inside create_order() via validate_promo() —
+  // a stale/expired code just silently contributes 0 discount rather than
+  // failing the order (see migration 0016_promo_codes.sql).
+  promoCode: string | null;
 }
 
 export async function createOrder(input: CreateOrderInput): Promise<string> {
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("create_order", {
-    p_items: input.items.map((i) => ({ slug: i.slug, name: i.name, brand: i.brand, price: i.price, qty: i.qty })),
-    p_subtotal: input.subtotal,
-    p_delivery_fee: input.deliveryFee,
-    p_discount: input.discount,
-    p_total: input.total,
+    p_items: input.items.map((i) => ({ slug: i.slug, qty: i.qty })),
     p_payment_method: input.paymentMethod,
     p_shipping: input.shipping,
+    p_promo_code: input.promoCode ?? undefined,
   });
 
-  if (error) throw error;
+  // Server Actions only reliably forward plain Error messages across the
+  // client/server boundary — a raw PostgrestError (verified: its .message
+  // reaches server logs fine but gets redacted to a generic message on the
+  // client) doesn't survive. Re-throw as a clean Error with a short, safe
+  // code the client can match on.
+  if (error) throw new Error(error.message.includes("INSUFFICIENT_STOCK") ? "INSUFFICIENT_STOCK" : "ORDER_FAILED");
   return data;
+}
+
+// Called from the (client) cart context when the customer applies a promo
+// code, so the input box can show real-time validity instead of the old
+// honesty-system "any non-empty string works". Returns the discount amount
+// in EGP, or null if the code is invalid/expired/below its minimum subtotal.
+export async function validatePromo(code: string, subtotal: number): Promise<number | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("validate_promo", { p_code: code, p_subtotal: subtotal });
+  if (error || data == null) return null;
+  return Number(data);
+}
+
+// Cancel while status = 'placed' only — the cancel_order() RPC (migration
+// 0022) enforces this and restores the stock create_order() decremented.
+// No assertAdmin here: ownership + status are checked inside the RPC itself.
+export async function cancelMyOrder(orderId: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("cancel_order", { p_order_id: orderId });
+  if (error) throw new Error("CANCEL_FAILED");
+  revalidatePath("/account/orders");
+}
+
+export interface ReorderItem {
+  slug: string;
+  name: string;
+  brand: string | null;
+  price: number;
+  stock: Enums<"stock_state">;
+  imageUrl: string | null;
+}
+
+// Live catalog state for a past order's product slugs. Order snapshots
+// (order_items) freeze price/name at purchase time and can reference
+// since-delisted products, and cart-context persists price into localStorage
+// + the server-synced cart, so reorder MUST read current data, never the
+// order snapshot.
+export async function getReorderItems(slugs: string[]): Promise<ReorderItem[]> {
+  const supabase = await createClient();
+  const uniqueSlugs = Array.from(new Set(slugs)).slice(0, 50);
+  if (uniqueSlugs.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("products")
+    .select("slug, name, brand, price, stock, product_images(url, position)")
+    .in("slug", uniqueSlugs);
+  if (error || !data) return [];
+
+  return data.map((row) => {
+    const images = [...row.product_images].sort((a, b) => a.position - b.position);
+    return {
+      slug: row.slug,
+      name: row.name,
+      brand: row.brand,
+      price: Number(row.price),
+      stock: row.stock,
+      imageUrl: images[0]?.url ?? null,
+    };
+  });
 }
 
 interface SaveAddressInput {
@@ -176,10 +240,26 @@ async function assertAdmin(): Promise<void> {
 
 export async function updateOrderStatus(orderId: string, newStatus: Enums<"order_status">): Promise<void> {
   await assertAdmin();
+  // Cancellation must go through cancel_order() so the stock create_order()
+  // decremented gets restored — this bare update never gave it back.
+  if (newStatus === "cancelled") throw new Error("USE_CANCEL_ORDER");
   const supabase = await createClient();
 
   const { error } = await supabase.from("orders").update({ status: newStatus }).eq("id", orderId);
   if (error) throw error;
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/orders");
+}
+
+// Admin cancel — the cancel_order() RPC (migration 0022) permits admins to
+// cancel 'placed' or 'confirmed' orders (mirrors canCancelOrder() in
+// lib/order-status.ts) and restores the decremented stock atomically.
+export async function cancelOrderAdmin(orderId: string): Promise<void> {
+  await assertAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("cancel_order", { p_order_id: orderId });
+  if (error) throw new Error("CANCEL_FAILED");
 
   revalidatePath("/admin");
   revalidatePath("/admin/orders");
@@ -212,12 +292,17 @@ type BadgeToneValue = (typeof BADGE_TONES)[number];
 // Shared parse of the catalog fields the admin product form submits, used by
 // both addProduct and updateProduct so the two write the same column set.
 // Optional text fields collapse empty strings to null; was_price only sticks
-// when it's a valid positive number.
+// when it's a valid positive number at or above the actual price (a lower
+// "was" price wouldn't represent a real discount).
 function parseProductFields(formData: FormData) {
   const text = (key: string) => String(formData.get(key) ?? "").trim() || null;
 
+  const price = Number(formData.get("price"));
   const wasPriceRaw = Number(formData.get("wasPrice"));
-  const wasPrice = Number.isFinite(wasPriceRaw) && wasPriceRaw > 0 ? wasPriceRaw : null;
+  const wasPrice =
+    Number.isFinite(wasPriceRaw) && wasPriceRaw > 0 && (!Number.isFinite(price) || wasPriceRaw >= price)
+      ? wasPriceRaw
+      : null;
 
   const badgeLabel = text("badgeLabel");
   const badgeToneRaw = String(formData.get("badgeTone") ?? "").trim();
@@ -231,7 +316,7 @@ function parseProductFields(formData: FormData) {
     sub: text("sub"),
     category_id: text("categoryId"),
     sku: text("sku"),
-    price: Number(formData.get("price")),
+    price,
     was_price: wasPrice,
     // A badge only makes sense with both a label and a tone; drop both if either
     // is missing so a half-set badge never renders.
@@ -291,6 +376,21 @@ export async function addProduct(formData: FormData): Promise<{ slug: string }> 
 
 type ServerSupabase = Awaited<ReturnType<typeof createClient>>;
 
+// The form's accept="image/*" is client-side only — re-validate here since a
+// direct action call can send any file.
+function assertValidImage(image: File): void {
+  if (!image.type.startsWith("image/")) throw new Error("Upload must be an image");
+  if (image.size > 5 * 1024 * 1024) throw new Error("Image must be under 5MB");
+}
+
+// Extension comes from a user-controlled filename — restrict it to a plain
+// alphanumeric token so it can't smuggle path separators or odd characters
+// into the storage key.
+function safeExtension(filename: string): string {
+  const rawExt = filename.split(".").pop() ?? "";
+  return /^[a-z0-9]{1,8}$/i.test(rawExt) ? rawExt.toLowerCase() : "jpg";
+}
+
 // Uploads a validated image to the product-images bucket and points the
 // product's position-0 product_images row (the card/carousel thumbnail —
 // see CLAUDE.md's images section) at it, replacing any previous thumbnail
@@ -302,17 +402,8 @@ async function setProductThumbnail(
   slug: string,
   image: File
 ): Promise<void> {
-  // The form's accept="image/*" is client-side only — re-validate here
-  // since a direct action call can send any file.
-  if (!image.type.startsWith("image/")) throw new Error("Upload must be an image");
-  if (image.size > 5 * 1024 * 1024) throw new Error("Image must be under 5MB");
-
-  // Extension comes from a user-controlled filename — restrict it to a
-  // plain alphanumeric token so it can't smuggle path separators or odd
-  // characters into the storage key.
-  const rawExt = image.name.split(".").pop() ?? "";
-  const ext = /^[a-z0-9]{1,8}$/i.test(rawExt) ? rawExt.toLowerCase() : "jpg";
-  const path = `${slug}/${Date.now()}.${ext}`;
+  assertValidImage(image);
+  const path = `${slug}/${Date.now()}.${safeExtension(image.name)}`;
 
   const { error: uploadError } = await supabase.storage.from("product-images").upload(path, image);
   if (uploadError) throw uploadError;
@@ -385,4 +476,144 @@ export async function updateProduct(formData: FormData): Promise<void> {
 
   revalidatePath("/admin");
   revalidatePath("/admin/inventory");
+}
+
+// Uploads one or more gallery images for an existing product. If the product
+// has no images yet, the first upload becomes position 0 (the card/carousel
+// thumbnail) so it isn't left without one; otherwise new images append after
+// the current max position. Returns the inserted rows so the admin modal can
+// update its local gallery state without waiting for a full page refetch.
+export async function addProductImages(
+  formData: FormData
+): Promise<{ id: string; url: string; position: number }[]> {
+  await assertAdmin();
+  const supabase = await createClient();
+
+  const productId = String(formData.get("productId") ?? "");
+  const slug = String(formData.get("slug") ?? "");
+  const files = formData.getAll("images").filter((f): f is File => f instanceof File && f.size > 0);
+  if (!productId || !slug) throw new Error("Missing product");
+  if (files.length === 0) throw new Error("No images to upload");
+
+  for (const file of files) assertValidImage(file);
+
+  const { data: existingRows, error: existingError } = await supabase
+    .from("product_images")
+    .select("position")
+    .eq("product_id", productId);
+  if (existingError) throw existingError;
+
+  let nextPosition = existingRows.length === 0 ? 0 : Math.max(...existingRows.map((r) => r.position)) + 1;
+
+  const inserted: { id: string; url: string; position: number }[] = [];
+  for (const file of files) {
+    const path = `${slug}/${Date.now()}-${nextPosition}.${safeExtension(file.name)}`;
+    const { error: uploadError } = await supabase.storage.from("product-images").upload(path, file);
+    if (uploadError) throw uploadError;
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("product-images").getPublicUrl(path);
+
+    const { data: row, error: insertError } = await supabase
+      .from("product_images")
+      .insert({ product_id: productId, url: publicUrl, position: nextPosition })
+      .select("id, url, position")
+      .single();
+    if (insertError) throw insertError;
+
+    inserted.push(row);
+    nextPosition += 1;
+  }
+
+  revalidatePath("/admin/inventory");
+  revalidatePath(`/product/${slug}`);
+  revalidatePath("/");
+  return inserted;
+}
+
+// Position 0 is the card/carousel/hero thumbnail — it's replaced via the
+// photo field above, never deleted from the gallery grid, so the storefront
+// never ends up with a product that has other gallery images but no
+// thumbnail.
+export async function deleteProductImage(imageId: string): Promise<void> {
+  await assertAdmin();
+  const supabase = await createClient();
+
+  const { data: row, error: fetchError } = await supabase
+    .from("product_images")
+    .select("id, url, position, products(slug)")
+    .eq("id", imageId)
+    .maybeSingle();
+  if (fetchError) throw fetchError;
+  if (!row) return;
+  if (row.position === 0) throw new Error("Cannot delete the main product photo this way");
+
+  const { error: deleteError } = await supabase.from("product_images").delete().eq("id", imageId);
+  if (deleteError) throw deleteError;
+
+  // Best-effort: the DB row is already gone, so a leftover storage object is
+  // only a stray file, not a correctness issue.
+  const path = row.url.split("/product-images/")[1];
+  if (path) {
+    await supabase.storage
+      .from("product-images")
+      .remove([path])
+      .catch(() => {});
+  }
+
+  revalidatePath("/admin/inventory");
+  if (row.products?.slug) revalidatePath(`/product/${row.products.slug}`);
+}
+
+interface SubmitReviewInput {
+  productSlug: string;
+  rating: number;
+  body: string;
+}
+
+// One review per (product, customer) — re-submitting edits the existing row
+// via upsert rather than erroring or duplicating. The has_purchased() RPC
+// (migration 0018) is the real gate; RLS backs it up at the row level but
+// can't itself express "only reviewers who bought this product," so that
+// check lives here in the action.
+export async function submitReview(input: SubmitReviewInput): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Sign in required");
+
+  const rating = Math.round(input.rating);
+  if (!Number.isFinite(rating) || rating < 1 || rating > 5) throw new Error("Invalid rating");
+  const body = input.body.trim().slice(0, 1000) || null;
+
+  const { data: purchased, error: purchasedError } = await supabase.rpc("has_purchased", {
+    p_product_slug: input.productSlug,
+  });
+  if (purchasedError) throw purchasedError;
+  if (!purchased) throw new Error("NOT_PURCHASED");
+
+  const { data: product, error: productError } = await supabase
+    .from("products")
+    .select("id")
+    .eq("slug", input.productSlug)
+    .maybeSingle();
+  if (productError) throw productError;
+  if (!product) throw new Error("Product not found");
+
+  // author_name is public (reviews are publicly readable) — never fall back
+  // to the user's email here, only their display name or a generic label.
+  const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
+  const authorName = profile?.full_name?.trim() || "Verified customer";
+
+  const { error } = await supabase
+    .from("reviews")
+    .upsert(
+      { product_id: product.id, user_id: user.id, rating, body, author_name: authorName },
+      { onConflict: "product_id,user_id" }
+    );
+  if (error) throw error;
+
+  revalidatePath(`/product/${input.productSlug}`);
 }

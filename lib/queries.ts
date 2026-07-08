@@ -86,6 +86,9 @@ export interface ProductFilters {
   brands?: string[];
   priceRangeIds?: string[];
   sort?: string;
+  // Backs /category/offers — restricts to products where the generated
+  // on_sale column is true (was_price is a genuine discount over price).
+  onSale?: boolean;
 }
 
 // Filters (category/brand/price) and sort are all applied in the query
@@ -98,6 +101,7 @@ export async function getFilteredProducts(filters: ProductFilters): Promise<List
 
   if (filters.categoryIds?.length) query = query.in("category_id", filters.categoryIds);
   if (filters.brands?.length) query = query.in("brand", filters.brands);
+  if (filters.onSale) query = query.eq("on_sale", true);
   if (filters.priceRangeIds?.length) {
     const orFilter = buildPriceOrFilter(filters.priceRangeIds);
     if (orFilter) query = query.or(orFilter);
@@ -161,6 +165,40 @@ export async function getProductBySlug(slug: string): Promise<ProductDetail | nu
       createdAt: r.created_at,
     })),
   };
+}
+
+// Whether a request has a signed-in user at all — no role/ownership info,
+// just enough for the review form to decide between the sign-in prompt and
+// the write form (the real purchase/ownership checks live server-side in
+// submitReview()).
+export async function isSignedIn(): Promise<boolean> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return Boolean(user);
+}
+
+export interface PendingReview {
+  slug: string;
+  name: string;
+  imageUrl: string | null;
+}
+
+// Products from the signed-in customer's DELIVERED orders that they haven't
+// reviewed yet — feeds the post-delivery review prompt. Returns [] for guests
+// (the RPC scopes to auth.uid()). Failures fail closed to [] so a hiccup here
+// never blocks the storefront layout that awaits it.
+export async function getPendingReviews(): Promise<PendingReview[]> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase.rpc("get_pending_reviews");
+  if (error || !data) return [];
+  return data.map((row) => ({ slug: row.slug, name: row.name, imageUrl: row.image_url }));
 }
 
 export async function searchProducts(query: string): Promise<ListingProduct[]> {
@@ -262,6 +300,7 @@ export async function getAdminSession(): Promise<AdminSession> {
 }
 
 export interface AdminOrderItem {
+  slug: string | null;
   name: string;
   brand: string | null;
   price: number;
@@ -292,10 +331,10 @@ interface ShippingSnapshot {
   notes?: string;
 }
 
-const ORDER_SELECT_WITH_ITEMS = "*, order_items(name, brand, price, qty)";
+const ORDER_SELECT_WITH_ITEMS = "*, order_items(product_slug, name, brand, price, qty)";
 
 type OrderRowWithItems = Tables<"orders"> & {
-  order_items: Pick<Tables<"order_items">, "name" | "brand" | "price" | "qty">[];
+  order_items: Pick<Tables<"order_items">, "product_slug" | "name" | "brand" | "price" | "qty">[];
 };
 
 function toAdminOrder(row: OrderRowWithItems): AdminOrder {
@@ -314,6 +353,7 @@ function toAdminOrder(row: OrderRowWithItems): AdminOrder {
     customerPhone: shipping.phone ?? "",
     customerAddress: [shipping.address, shipping.city].filter(Boolean).join(", "),
     items: (row.order_items ?? []).map((i) => ({
+      slug: i.product_slug,
       name: i.name,
       brand: i.brand,
       price: Number(i.price),
@@ -363,6 +403,7 @@ export async function getMyOrders(): Promise<MyOrdersResult> {
 
 export interface AdminInventoryItem {
   id: string;
+  slug: string;
   name: string;
   brand: string | null;
   sub: string | null;
@@ -383,6 +424,10 @@ export interface AdminInventoryItem {
   warnings: string | null;
   storage: string | null;
   imageUrl?: string;
+  // All product_images rows (including position 0, the card/carousel
+  // thumbnail) so the admin gallery section can render and manage every
+  // image; consumers skip position 0 when rendering the extra grid.
+  galleryImages: { id: string; url: string; position: number }[];
 }
 
 export async function getAdminInventory(): Promise<AdminInventoryItem[]> {
@@ -390,15 +435,17 @@ export async function getAdminInventory(): Promise<AdminInventoryItem[]> {
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, name, brand, sub, sku, category_id, price, was_price, stock_count, low_stock_threshold, stock, badge_label, badge_tone, is_popular, description, dosage, ingredients, warnings, storage, categories(label), product_images(url, position)"
+      "id, slug, name, brand, sub, sku, category_id, price, was_price, stock_count, low_stock_threshold, stock, badge_label, badge_tone, is_popular, description, dosage, ingredients, warnings, storage, categories(label), product_images(id, url, position)"
     )
     .order("name");
   if (error) throw error;
 
   return data.map((row) => {
-    const thumbnail = (row.product_images ?? []).slice().sort((a, b) => a.position - b.position)[0];
+    const galleryImages = (row.product_images ?? []).slice().sort((a, b) => a.position - b.position);
+    const thumbnail = galleryImages[0];
     return {
       id: row.id,
+      slug: row.slug,
       name: row.name,
       brand: row.brand,
       sub: row.sub,
@@ -419,6 +466,7 @@ export async function getAdminInventory(): Promise<AdminInventoryItem[]> {
       warnings: row.warnings,
       storage: row.storage,
       imageUrl: thumbnail?.url,
+      galleryImages,
     };
   });
 }

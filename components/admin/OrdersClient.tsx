@@ -5,7 +5,7 @@ import { Search } from "lucide-react";
 import Input from "@/components/ui/Input";
 import OrderStatusBadge from "@/components/admin/OrderStatusBadge";
 import OrderDetailDrawer from "@/components/admin/OrderDetailDrawer";
-import { updateOrderStatus } from "@/lib/actions";
+import { cancelOrderAdmin, updateOrderStatus } from "@/lib/actions";
 import { formatEGP } from "@/lib/cart-totals";
 import { ORDER_STATUS_META, type OrderStatus } from "@/lib/order-status";
 import type { AdminOrder } from "@/lib/queries";
@@ -49,7 +49,9 @@ export default function OrdersClient({ orders }: { orders: AdminOrder[] }) {
   function handleCancel() {
     if (!selectedOrder) return;
     startTransition(async () => {
-      await updateOrderStatus(selectedOrder.id, "cancelled");
+      // Cancellation always goes through cancel_order() (via cancelOrderAdmin)
+      // so the stock create_order() decremented gets restored.
+      await cancelOrderAdmin(selectedOrder.id);
     });
   }
 

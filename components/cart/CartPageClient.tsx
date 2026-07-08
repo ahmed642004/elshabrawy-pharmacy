@@ -15,7 +15,7 @@ export default function CartPageClient() {
   const router = useRouter();
   const t = useTranslations("cart");
   const tListing = useTranslations("listing");
-  const { items, savedItems, addItem, removeItem, moveToCart, promoApplied } = useCart();
+  const { items, savedItems, addItem, removeItem, moveToCart, promo } = useCart();
   const [toast, setToast] = useState<CartItem | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -40,7 +40,7 @@ export default function CartPageClient() {
   }
 
   const isEmpty = items.length === 0 && savedItems.length === 0;
-  const { total } = getCartTotals(items, promoApplied);
+  const { total } = getCartTotals(items, promo?.discount ?? 0);
 
   return (
     <main

@@ -1,5 +1,6 @@
 import { Star } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import ReviewForm from "@/components/product/ReviewForm";
 
 export interface Review {
   authorName: string;
@@ -29,12 +30,14 @@ function StarRow({ rating }: { rating: number }) {
 }
 
 interface ProductReviewsProps {
+  slug: string;
+  isLoggedIn: boolean;
   rating: number | null;
   reviewCount: number;
   reviews: Review[];
 }
 
-export default function ProductReviews({ rating, reviewCount, reviews }: ProductReviewsProps) {
+export default function ProductReviews({ slug, isLoggedIn, rating, reviewCount, reviews }: ProductReviewsProps) {
   const t = useTranslations("product");
   const locale = useLocale();
 
@@ -67,6 +70,10 @@ export default function ProductReviews({ rating, reviewCount, reviews }: Product
           ) : (
             <p className="m-0 text-sm text-neutral-500">{t("noReviews")}</p>
           )}
+
+          <div className="max-w-[520px]">
+            <ReviewForm slug={slug} isLoggedIn={isLoggedIn} />
+          </div>
         </div>
       </div>
     </div>

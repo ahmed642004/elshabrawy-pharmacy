@@ -138,3 +138,241 @@ html[dir="rtl"] [dir="ltr"] {
   --font-headline-src: var(--font-public-sans);
   --font-body-src: var(--font-inter);
 }
+
+/* ---- Home hero animations (components/home/Hero.tsx) ----
+   Everything animates transform/opacity only, so it stays GPU-composited
+   and costs nothing on the main thread. */
+
+@keyframes heroFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Slow drifting aurora blobs behind the gradient. */
+@keyframes heroBlobA {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  33% {
+    transform: translate3d(60px, -40px, 0) scale(1.15);
+  }
+  66% {
+    transform: translate3d(-40px, 30px, 0) scale(0.95);
+  }
+}
+
+@keyframes heroBlobB {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-70px, 40px, 0) scale(1.2);
+  }
+}
+
+/* Gentle bob for the floating glass cards. */
+@keyframes heroFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Expanding pulse rings around the pharmacy cross. */
+@keyframes heroRing {
+  0% {
+    transform: scale(0.55);
+    opacity: 0.75;
+  }
+  100% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+}
+
+/* Soft breathing glow on the cross itself. */
+@keyframes heroGlow {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+@keyframes heroTwinkle {
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: scale(0.7);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.15);
+  }
+}
+
+/* Light sweep across the badge. */
+@keyframes heroShimmer {
+  from {
+    transform: translateX(-160%) skewX(-18deg);
+  }
+  to {
+    transform: translateX(260%) skewX(-18deg);
+  }
+}
+
+/* ---- Site-wide micro-interaction keyframes (cc*) ----
+   Same rules as the hero set: transform/opacity only. Applied via inline
+   style={{ animation: "..." }} per the house convention. */
+
+/* Overlay/backdrop fade — also retroactively activates the admin modals,
+   which referenced this name before it existed. */
+@keyframes ccOverlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Modal/lightbox panel entrance. */
+@keyframes ccScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Mobile bottom sheet slide-up (Y-axis: RTL-safe). */
+@keyframes ccSheetUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+/* Dropdown/drawer drop-in (Y-axis: RTL-safe). */
+@keyframes ccDropIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Admin order drawer slide (admin is pinned LTR, so physical X is safe
+   there — do not reuse in shop UI). */
+@keyframes ccSlideInX {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Cart badge / wishlist heart pop. */
+@keyframes ccBadgePop {
+  0% {
+    transform: scale(0.6);
+  }
+  60% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Toast entrance. */
+@keyframes ccToastIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Content crossfade (tabs, gallery image swap). */
+@keyframes ccFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Checkout success checkmark pop. */
+@keyframes ccPopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Skeleton shimmer sweep (decorative, direction-agnostic). */
+@keyframes ccSkeletonSweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* Pseudo-elements can't take inline style, so the skeleton sweep gets a
+   class (used by components/ui/Skeleton.tsx). */
+.cc-skeleton::after {
+  animation: ccSkeletonSweep 1.6s ease-in-out infinite;
+}
+
+/* Global reduced-motion guard (was scoped to .hero-motion before the
+   site-wide polish pass). Durations collapse to near-zero so entrance
+   animations with fill-mode:both snap to their visible end state. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

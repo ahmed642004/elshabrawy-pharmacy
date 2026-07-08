@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 interface ProductTabsProps {
@@ -41,15 +41,24 @@ export default function ProductTabs({ description, dosage, ingredients, warnings
               key={t.id}
               type="button"
               onClick={() => setActiveTab(t.id)}
-              className={`shrink-0 border-b-2 py-3.5 font-label text-sm font-semibold whitespace-nowrap ${
-                activeTab === t.id ? "border-primary-500 text-neutral-900" : "border-transparent text-neutral-500"
+              // Grow-in underline via a scaled pseudo-element (a true sliding
+              // indicator would need rect measurement; this is the zero-risk,
+              // RTL-safe house-style choice).
+              className={`relative shrink-0 py-3.5 font-label text-sm font-semibold whitespace-nowrap transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:origin-center after:bg-primary-500 after:transition-transform after:duration-300 ${
+                activeTab === t.id ? "text-neutral-900 after:scale-x-100" : "text-neutral-500 after:scale-x-0"
               }`}
             >
               {t.label}
             </button>
           ))}
         </div>
-        <div className="max-w-[760px] py-6 text-[14.5px] leading-[1.7] text-neutral-700">{activeContent}</div>
+        <div
+          key={activeTab}
+          className="max-w-[760px] py-6 text-[14.5px] leading-[1.7] text-neutral-700"
+          style={{ animation: "ccFadeIn 200ms ease-out" }}
+        >
+          {activeContent}
+        </div>
       </div>
 
       {/* Mobile: accordion */}
@@ -64,13 +73,21 @@ export default function ProductTabs({ description, dosage, ingredients, warnings
                 className="flex w-full items-center justify-between py-4 text-start"
               >
                 <span className="font-headline text-[15px] font-bold text-neutral-900">{t.label}</span>
-                {open ? (
-                  <ChevronUp className="h-[18px] w-[18px] text-neutral-500" />
-                ) : (
-                  <ChevronDown className="h-[18px] w-[18px] text-neutral-500" />
-                )}
+                <ChevronDown
+                  className={`h-[18px] w-[18px] text-neutral-500 transition-transform duration-300 ${open ? "rotate-180" : ""}`}
+                />
               </button>
-              {open && <div className="pb-[18px] text-sm leading-[1.7] text-neutral-700">{t.content}</div>}
+              {/* grid-template-rows 0fr→1fr is the standard CSS height-animation
+                  trick (deliberate layout-animation exception — content is short
+                  text, cost negligible, reduced-motion guard neutralizes it). */}
+              <div
+                className="grid transition-[grid-template-rows] duration-300 ease-out"
+                style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
+              >
+                <div className="overflow-hidden">
+                  <div className="pb-[18px] text-sm leading-[1.7] text-neutral-700">{t.content}</div>
+                </div>
+              </div>
             </div>
           );
         })}

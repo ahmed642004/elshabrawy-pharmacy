@@ -5,7 +5,7 @@ import { X, ImagePlus } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import IconButton from "@/components/ui/IconButton";
-import { addProduct, updateProduct } from "@/lib/actions";
+import { addProduct, updateProduct, addProductImages, deleteProductImage } from "@/lib/actions";
 import type { AdminInventoryItem, CategoryRow } from "@/lib/queries";
 
 interface ProductFormModalProps {
@@ -24,10 +24,52 @@ export default function ProductFormModal({ categories, product, onClose }: Produ
   const [imagePreview, setImagePreview] = useState<string | null>(product?.imageUrl ?? null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [priceValue, setPriceValue] = useState(product?.price != null ? String(product.price) : "");
+  const [galleryImages, setGalleryImages] = useState(product?.galleryImages ?? []);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [deletingImageId, setDeletingImageId] = useState<string | null>(null);
+  const [galleryError, setGalleryError] = useState("");
 
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     setImagePreview(file ? URL.createObjectURL(file) : (product?.imageUrl ?? null));
+  }
+
+  // Gallery uploads/deletes are independent of the main form submit — they
+  // hit their own server actions immediately and update local state so the
+  // modal reflects the change without waiting for a full page refetch (the
+  // parent's inventory prop only refreshes once this modal closes).
+  async function handleGalleryUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !product) return;
+    setUploadingImages(true);
+    setGalleryError("");
+    try {
+      const formData = new FormData();
+      formData.append("productId", product.id);
+      formData.append("slug", product.slug);
+      for (const file of Array.from(files)) formData.append("images", file);
+      const inserted = await addProductImages(formData);
+      setGalleryImages((prev) => [...prev, ...inserted]);
+    } catch {
+      setGalleryError("Couldn't upload one or more images. Please try again.");
+    } finally {
+      setUploadingImages(false);
+      e.target.value = "";
+    }
+  }
+
+  async function handleDeleteImage(id: string) {
+    setDeletingImageId(id);
+    setGalleryError("");
+    try {
+      await deleteProductImage(id);
+      setGalleryImages((prev) => prev.filter((img) => img.id !== id));
+    } catch {
+      setGalleryError("Couldn't remove that image. Please try again.");
+    } finally {
+      setDeletingImageId(null);
+    }
   }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -36,8 +78,16 @@ export default function ProductFormModal({ categories, product, onClose }: Produ
     setSubmitting(true);
     setError("");
 
+    const formData = new FormData(e.currentTarget);
+    const price = Number(formData.get("price"));
+    const wasPriceRaw = String(formData.get("wasPrice") ?? "").trim();
+    if (wasPriceRaw && Number(wasPriceRaw) < price) {
+      setError("Was price can't be lower than the price.");
+      setSubmitting(false);
+      return;
+    }
+
     try {
-      const formData = new FormData(e.currentTarget);
       if (editing) await updateProduct(formData);
       else await addProduct(formData);
       onClose();
@@ -54,6 +104,7 @@ export default function ProductFormModal({ categories, product, onClose }: Produ
       <div
         onClick={(e) => e.stopPropagation()}
         className="relative mx-4 flex max-h-[88vh] w-full max-w-[440px] flex-col overflow-y-auto rounded-[20px] bg-white p-5 shadow-lg md:p-7"
+        style={{ animation: "ccScaleIn 200ms ease-out" }}
       >
         <div className="mb-5 flex items-start justify-between">
           <div>
@@ -92,6 +143,46 @@ export default function ProductFormModal({ categories, product, onClose }: Produ
               />
             </div>
           </label>
+
+          {editing && product && (
+            <div className="flex flex-col gap-2">
+              <span className="font-label text-xs font-semibold text-neutral-500">Gallery images</span>
+              {galleryImages.filter((img) => img.position !== 0).length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {galleryImages
+                    .filter((img) => img.position !== 0)
+                    .map((img) => (
+                      <div key={img.id} className="relative h-16 w-16 shrink-0 overflow-hidden rounded-[10px] bg-neutral-100">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={img.url} alt="" className="h-full w-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteImage(img.id)}
+                          disabled={deletingImageId === img.id}
+                          aria-label="Remove image"
+                          className="absolute top-0.5 end-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-900/60 text-white disabled:opacity-50"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                </div>
+              )}
+              <label className="flex h-10 w-fit cursor-pointer items-center gap-2 rounded-[10px] border border-neutral-300 bg-white px-3 text-sm font-semibold text-neutral-700">
+                <ImagePlus className="h-4 w-4" />
+                {uploadingImages ? "Uploading…" : "Add gallery images"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleGalleryUpload}
+                  disabled={uploadingImages}
+                  className="hidden"
+                />
+              </label>
+              {galleryError && <div className="text-xs text-danger-500">{galleryError}</div>}
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -139,6 +230,7 @@ export default function ProductFormModal({ categories, product, onClose }: Produ
                 required
                 placeholder="0"
                 defaultValue={product?.price ?? ""}
+                onChange={(e) => setPriceValue(e.target.value)}
               />
             </div>
             <div>
@@ -146,10 +238,11 @@ export default function ProductFormModal({ categories, product, onClose }: Produ
               <Input
                 name="wasPrice"
                 type="number"
-                min="0"
+                min={priceValue || "0"}
                 step="0.01"
                 placeholder="—"
                 defaultValue={product?.wasPrice ?? ""}
+                title="Was price can't be lower than the price"
               />
             </div>
           </div>

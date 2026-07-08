@@ -57,7 +57,10 @@ function LiveSearchDropdown({ open, loading, results, query, onClose, onSeeAll }
         onClick={onClose}
         className="fixed inset-0 z-40 cursor-default"
       />
-      <div className="absolute inset-x-0 top-full z-50 mt-2 max-h-[360px] overflow-y-auto rounded-[14px] border border-neutral-200 bg-white p-2 shadow-lg">
+      <div
+        className="absolute inset-x-0 top-full z-50 mt-2 max-h-[360px] overflow-y-auto rounded-[14px] border border-neutral-200 bg-white p-2 shadow-lg"
+        style={{ animation: "ccDropIn 160ms ease-out" }}
+      >
         {loading ? (
           <div className="px-3 py-4 text-center text-sm text-neutral-500">{t("searching")}</div>
         ) : results.length > 0 ? (
@@ -251,7 +254,10 @@ export default function HeaderClient({ user }: { user: HeaderUser | null }) {
                       onClick={() => setAccountMenuOpen(false)}
                       className="fixed inset-0 z-40 cursor-default"
                     />
-                    <div className="absolute end-0 z-50 mt-2 w-56 rounded-[14px] border border-neutral-200 bg-white p-3 shadow-lg">
+                    <div
+                      className="absolute end-0 z-50 mt-2 w-56 rounded-[14px] border border-neutral-200 bg-white p-3 shadow-lg"
+                      style={{ animation: "ccDropIn 160ms ease-out" }}
+                    >
                       <div className="mb-2 border-b border-neutral-100 pb-2">
                         <div className="truncate font-headline text-sm font-bold text-neutral-900">
                           {user.fullName || t("signedIn")}
@@ -305,11 +311,15 @@ export default function HeaderClient({ user }: { user: HeaderUser | null }) {
             <Link
               href="/cart"
               aria-label={t("cart")}
-              className="relative flex h-10 w-10 items-center justify-center rounded-full bg-primary-500 text-white hover:bg-primary-600"
+              className="relative flex h-10 w-10 items-center justify-center rounded-full bg-primary-500 text-white transition-colors hover:bg-primary-600"
             >
               <ShoppingCart className="h-[18px] w-[18px]" />
               {itemCount > 0 && (
-                <span className="absolute -end-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-white bg-danger-500 px-1 text-[11px] font-bold text-white">
+                <span
+                  key={itemCount}
+                  style={{ animation: "ccBadgePop 300ms ease-out" }}
+                  className="absolute -end-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-white bg-danger-500 px-1 text-[11px] font-bold text-white"
+                >
                   {itemCount}
                 </span>
               )}
@@ -322,7 +332,7 @@ export default function HeaderClient({ user }: { user: HeaderUser | null }) {
             <Link
               key={link.href}
               href={link.href}
-              className={`whitespace-nowrap font-label text-[13px] font-semibold no-underline ${"danger" in link && link.danger ? "text-danger-500" : "text-neutral-500"}`}
+              className={`whitespace-nowrap font-label text-[13px] font-semibold no-underline transition-colors ${"danger" in link && link.danger ? "text-danger-500 hover:text-danger-600" : "text-neutral-500 hover:text-primary-600"}`}
             >
               {t(`nav.${link.key}`)}
             </Link>
@@ -355,7 +365,11 @@ export default function HeaderClient({ user }: { user: HeaderUser | null }) {
           >
             <ShoppingCart className="h-[18px] w-[18px]" />
             {itemCount > 0 && (
-              <span className="absolute -end-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-white bg-danger-500 px-1 text-[11px] font-bold text-white">
+              <span
+                key={itemCount}
+                style={{ animation: "ccBadgePop 300ms ease-out" }}
+                className="absolute -end-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-white bg-danger-500 px-1 text-[11px] font-bold text-white"
+              >
                 {itemCount}
               </span>
             )}
@@ -377,7 +391,10 @@ export default function HeaderClient({ user }: { user: HeaderUser | null }) {
 
       {/* Mobile menu drawer */}
       {menuOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-white md:hidden">
+        <div
+          className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-white md:hidden"
+          style={{ animation: "ccDropIn 200ms ease-out" }}
+        >
           <div className="flex items-center justify-between border-b border-neutral-200 p-4">
             <span className="font-headline text-lg font-extrabold text-neutral-900">{t("menu")}</span>
             <button

@@ -2,6 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { validatePromo } from "@/lib/actions";
+import { getCartTotals } from "@/lib/cart-totals";
 import type { StockState } from "@/components/ProductCard";
 
 export interface CartItem {
@@ -13,6 +15,11 @@ export interface CartItem {
   stock: StockState;
 }
 
+export interface AppliedPromo {
+  code: string;
+  discount: number;
+}
+
 interface CartContextValue {
   items: CartItem[];
   savedItems: CartItem[];
@@ -22,10 +29,15 @@ interface CartContextValue {
   saveForLater: (slug: string) => void;
   moveToCart: (slug: string) => void;
   clearCart: () => void;
-  promoCode: string;
-  setPromoCode: (code: string) => void;
-  promoApplied: boolean;
-  applyPromo: () => void;
+  // promoInput is the raw text box value; promo is the last successfully
+  // validated code + its server-computed discount amount (null if none
+  // applied, or if the last attempt failed — see promoError).
+  promoInput: string;
+  setPromoInput: (code: string) => void;
+  promo: AppliedPromo | null;
+  promoError: boolean;
+  applyPromo: () => Promise<void>;
+  clearPromo: () => void;
   itemCount: number;
 }
 
@@ -55,19 +67,21 @@ const STORAGE_KEY = "elshabrawy-pharmacy-cart";
 interface StoredCart {
   items: CartItem[];
   savedItems: CartItem[];
+  promo?: AppliedPromo | null;
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [savedItems, setSavedItems] = useState<CartItem[]>([]);
-  const [promoCode, setPromoCode] = useState("");
-  const [promoApplied, setPromoApplied] = useState(false);
+  const [promoInput, setPromoInput] = useState("");
+  const [promo, setPromo] = useState<AppliedPromo | null>(null);
+  const [promoError, setPromoError] = useState(false);
 
   const supabase = useMemo(() => createClient(), []);
   // Mirrors the latest items/savedItems for the async sign-in merge below —
   // by the time the server cart response arrives, state may have moved past
   // what the closure captured.
-  const stateRef = useRef<StoredCart>({ items: [], savedItems: [] });
+  const stateRef = useRef<StoredCart>({ items: [], savedItems: [], promo: null });
   // The signed-in user currently being synced, and whether the initial
   // server merge for that user has completed (pushes are held until it has,
   // so a pre-merge local state can't clobber the server copy).
@@ -83,16 +97,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setItems(stored.items ?? []);
       setSavedItems(stored.savedItems ?? []);
+      setPromo(stored.promo ?? null);
     } catch {
       // ignore malformed local storage content
     }
   }, []);
 
   useEffect(() => {
-    const stored: StoredCart = { items, savedItems };
+    const stored: StoredCart = { items, savedItems, promo };
     stateRef.current = stored;
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
-  }, [items, savedItems]);
+  }, [items, savedItems, promo]);
 
   // Server sync, layered on top of localStorage: signed-in users get their
   // cart merged from and written back to the cart_items table, so it follows
@@ -212,14 +227,31 @@ export function CartProvider({ children }: { children: ReactNode }) {
     [savedItems]
   );
 
-  const applyPromo = useCallback(() => {
-    setPromoApplied((prev) => prev || promoCode.trim().length > 0);
-  }, [promoCode]);
+  const applyPromo = useCallback(async () => {
+    const code = promoInput.trim();
+    if (!code) return;
+    const { subtotal } = getCartTotals(items, 0);
+    const discount = await validatePromo(code, subtotal);
+    if (discount == null) {
+      setPromo(null);
+      setPromoError(true);
+      return;
+    }
+    setPromo({ code: code.toUpperCase(), discount });
+    setPromoError(false);
+  }, [items, promoInput]);
+
+  const clearPromo = useCallback(() => {
+    setPromoInput("");
+    setPromo(null);
+    setPromoError(false);
+  }, []);
 
   const clearCart = useCallback(() => {
     setItems([]);
-    setPromoCode("");
-    setPromoApplied(false);
+    setPromoInput("");
+    setPromo(null);
+    setPromoError(false);
   }, []);
 
   const itemCount = items.reduce((sum, i) => sum + i.qty, 0);
@@ -235,10 +267,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
         saveForLater,
         moveToCart,
         clearCart,
-        promoCode,
-        setPromoCode,
-        promoApplied,
+        promoInput,
+        setPromoInput,
+        promo,
+        promoError,
         applyPromo,
+        clearPromo,
         itemCount,
       }}
     >

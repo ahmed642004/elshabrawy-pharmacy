@@ -10,8 +10,8 @@ import { getCartTotals, formatEGP } from "@/lib/cart-totals";
 export default function OrderSummary() {
   const router = useRouter();
   const t = useTranslations("cart");
-  const { items, promoCode, setPromoCode, promoApplied, applyPromo } = useCart();
-  const { subtotal, deliveryFree, deliveryFee, discount, total } = getCartTotals(items, promoApplied);
+  const { items, promoInput, setPromoInput, promo, promoError, applyPromo } = useCart();
+  const { subtotal, deliveryFree, deliveryFee, discount, total } = getCartTotals(items, promo?.discount ?? 0);
 
   return (
     <div className="flex flex-col gap-6 rounded-[14px] bg-white p-6 shadow-sm md:p-7">
@@ -28,25 +28,28 @@ export default function OrderSummary() {
             {subtotal === 0 ? "—" : deliveryFree ? t("free") : formatEGP(deliveryFee)}
           </span>
         </div>
-        {promoApplied && (
+        {promo && (
           <div className="flex justify-between text-sm text-secondary-600">
-            <span>{t("promoLine")}</span>
+            <span>{t("promoLine", { code: promo.code })}</span>
             <span>-{formatEGP(discount)}</span>
           </div>
         )}
       </div>
 
-      <div className="flex gap-2">
-        <input
-          type="text"
-          placeholder={t("promoPlaceholder")}
-          value={promoCode}
-          onChange={(e) => setPromoCode(e.target.value)}
-          className="h-[42px] flex-1 rounded-[10px] border border-neutral-300 bg-white px-3.5 font-body text-sm text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-primary-500"
-        />
-        <Button variant="outlined" size="md" onClick={applyPromo}>
-          {t("apply")}
-        </Button>
+      <div className="flex flex-col gap-1.5">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            placeholder={t("promoPlaceholder")}
+            value={promoInput}
+            onChange={(e) => setPromoInput(e.target.value)}
+            className="h-[42px] flex-1 rounded-[10px] border border-neutral-300 bg-white px-3.5 font-body text-sm text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-primary-500"
+          />
+          <Button variant="outlined" size="md" onClick={applyPromo}>
+            {t("apply")}
+          </Button>
+        </div>
+        {promoError && <div className="text-xs text-danger-500">{t("promoInvalid")}</div>}
       </div>
 
       <div className="h-px bg-neutral-200" />

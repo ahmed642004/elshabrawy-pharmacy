@@ -35,7 +35,11 @@ export default function OrderDetailDrawer({ order, onClose, onAdvance, onCancel,
   return (
     <div className="fixed inset-0 z-50" style={{ animation: "ccOverlayIn 160ms ease-out" }}>
       <div onClick={onClose} className="absolute inset-0 bg-neutral-900/40" />
-      <div className="absolute top-0 right-0 flex h-full w-full max-w-[420px] flex-col bg-white shadow-lg">
+      {/* Admin is pinned dir="ltr", so the physical-X slide keyframe is safe here. */}
+      <div
+        className="absolute top-0 right-0 flex h-full w-full max-w-[420px] flex-col bg-white shadow-lg"
+        style={{ animation: "ccSlideInX 220ms ease-out" }}
+      >
         <div className="flex items-start justify-between border-b border-neutral-200 p-6">
           <div>
             <div className="font-headline text-xl font-bold text-neutral-900">{order.orderNumber}</div>

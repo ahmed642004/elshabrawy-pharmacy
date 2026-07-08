@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import type { StockState } from "@/components/ProductCard";
 import { useCart } from "@/lib/cart-context";
+import { useToast } from "@/components/ui/ToastProvider";
 import { formatEGP } from "@/lib/cart-totals";
 
 interface ProductPurchasePanelProps {
@@ -43,6 +44,7 @@ export default function ProductPurchasePanel({
   const outOfStock = stock === "out";
   const discountPct = wasPrice ? Math.round((1 - price / wasPrice) * 100) : 0;
   const { addItem } = useCart();
+  const { showToast } = useToast();
 
   return (
     <div className="flex min-w-0 flex-col gap-3.5">
@@ -111,7 +113,10 @@ export default function ProductPurchasePanel({
               variant="primary"
               size="lg"
               className="min-w-[180px] flex-1"
-              onClick={() => addItem({ slug, name, brand, price, stock }, qty)}
+              onClick={() => {
+                addItem({ slug, name, brand, price, stock }, qty);
+                showToast(tCard("addedToast", { name }));
+              }}
             >
               <ShoppingCart className="h-[18px] w-[18px]" /> {t("addToCart")}
             </Button>
@@ -123,11 +128,13 @@ export default function ProductPurchasePanel({
         <button
           type="button"
           onClick={() => setWishlisted((v) => !v)}
-          className={`flex items-center gap-1.5 text-[13.5px] font-semibold ${
+          className={`flex items-center gap-1.5 text-[13.5px] font-semibold transition-colors ${
             wishlisted ? "text-danger-500" : "text-neutral-500"
           }`}
         >
-          <Heart className={`h-[18px] w-[18px] ${wishlisted ? "fill-current" : ""}`} />
+          <span key={String(wishlisted)} style={{ animation: "ccBadgePop 300ms ease-out" }}>
+            <Heart className={`h-[18px] w-[18px] ${wishlisted ? "fill-current" : ""}`} />
+          </span>
           {wishlisted ? t("wishlisted") : t("addToWishlist")}
         </button>
         <button type="button" className="flex items-center gap-1.5 text-[13.5px] font-semibold text-neutral-500">

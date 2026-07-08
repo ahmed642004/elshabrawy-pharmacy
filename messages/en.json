@@ -59,13 +59,18 @@
       "badge": "100% genuine products",
       "title": "Feel better, faster.",
       "subtitle": "Skincare, vitamins, supplements and everyday care — delivered fast, right to your door.",
-      "searchPlaceholder": "Search medicines, brands, symptoms…",
+      "cta": "Shop all products",
+      "trending": "Trending:",
+      "featured": "Featured this week",
       "quick1": "Vitamin C",
       "quick2": "Collagen powder",
       "quick3": "Retinol serum",
-      "panelTitle": "New in skincare",
-      "panelText": "Dermatologist-loved serums, moisturizers and vitamins, curated for every skin type.",
-      "panelCta": "Shop skincare"
+      "cardDelivery": "2-hour delivery",
+      "cardDeliverySub": "Inside Greater Cairo",
+      "cardLicensed": "Licensed pharmacy",
+      "cardLicensedSub": "Verified & regulated",
+      "cardPharmacist": "Ask a pharmacist",
+      "cardPharmacistSub": "Free chat, around the clock"
     },
     "categories": {
       "title": "Shop by category",
@@ -101,7 +106,8 @@
       "out": "Out of stock"
     },
     "addToCart": "Add {name} to cart",
-    "notifyMe": "Notify me when {name} is back in stock"
+    "notifyMe": "Notify me when {name} is back in stock",
+    "addedToast": "{name} added to cart"
   },
   "listing": {
     "breadcrumbHome": "Home",
@@ -113,6 +119,8 @@
     "clearAllFilters": "Clear all filters",
     "noMatch": "No products match your filters",
     "noMatchHint": "Try removing a filter or clearing all to see more results.",
+    "offersTitle": "Offers & deals",
+    "offersEmpty": "No offers right now — check back soon.",
     "showResults": "Show {count} results",
     "sort": {
       "recommended": "Recommended",
@@ -149,8 +157,9 @@
     "delivery": "Delivery",
     "free": "Free",
     "discount": "Discount",
-    "promoLine": "Promo (WELCOME20)",
+    "promoLine": "Promo ({code})",
     "promoPlaceholder": "Promo code",
+    "promoInvalid": "This code isn't valid",
     "apply": "Apply",
     "total": "Total",
     "proceed": "Proceed to checkout",
@@ -181,7 +190,8 @@
       "city": "City / area is required",
       "cardNumber": "Card number is required",
       "expiry": "Expiry is required",
-      "cvv": "CVV is required"
+      "cvv": "CVV is required",
+      "outOfStock": "Some items in your cart are no longer in stock. Please review your cart."
     },
     "paymentTitle": "Payment method",
     "methods": {
@@ -193,7 +203,7 @@
     "expiry": "MM / YY",
     "cvv": "CVV",
     "nameOnCard": "Name on card",
-    "promoApplied": "Promo code WELCOME20 applied",
+    "promoApplied": "Promo code {code} applied",
     "reviewTitle": "Review & place order",
     "qty": "Qty {qty}",
     "deliverTo": "Deliver to",
@@ -250,7 +260,29 @@
     "noReviews": "No reviews yet.",
     "showImage": "Show image {index} of {name}",
     "zoomIn": "Zoom in on {name}",
-    "close": "Close"
+    "close": "Close",
+    "reviewForm": {
+      "title": "Write a review",
+      "ratingLabel": "Rate {value} out of 5",
+      "bodyPlaceholder": "Share your experience with this product (optional)",
+      "submit": "Submit review",
+      "submitting": "Submitting…",
+      "signInPrompt": "Sign in to write a review.",
+      "notPurchased": "Only customers who bought this product can review it.",
+      "thanks": "Thanks for your review!",
+      "error": "Something went wrong submitting your review. Please try again."
+    }
+  },
+  "reviewPrompt": {
+    "title": "Rate your recent order",
+    "subtitle": "How was",
+    "progress": "{current} of {total}",
+    "bodyPlaceholder": "Add a comment (optional)",
+    "submit": "Submit",
+    "submitting": "Submitting…",
+    "skip": "Skip",
+    "close": "Close",
+    "error": "Something went wrong. Please try again."
   },
   "search": {
     "breadcrumb": "Search results",
@@ -362,6 +394,14 @@
       "cod": "Cash on delivery",
       "card": "Card on delivery",
       "wallet": "Mobile wallet"
-    }
+    },
+    "cancelOrder": "Cancel order",
+    "cancelConfirm": "Confirm cancellation?",
+    "cancelFailed": "Couldn't cancel this order. Please try again.",
+    "reorder": "Reorder",
+    "reordering": "Adding to cart…",
+    "reorderAdded": "{count, plural, one {# item added to your cart} other {# items added to your cart}}",
+    "reorderSkipped": "{count, plural, one {# item is no longer available} other {# items are no longer available}}",
+    "reorderNone": "None of these items are available right now."
   }
 }

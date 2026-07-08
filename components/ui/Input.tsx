@@ -6,7 +6,7 @@ export default function Input({
 }: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
-      className={`h-[46px] w-full rounded-[10px] border border-neutral-300 bg-white px-3.5 font-body text-sm text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-primary-500 focus:ring-3 focus:ring-primary-500/20 ${className}`}
+      className={`h-[46px] w-full rounded-[10px] border border-neutral-300 bg-white px-3.5 font-body text-sm text-neutral-900 outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-3 focus:ring-primary-500/20 ${className}`}
       {...rest}
     />
   );

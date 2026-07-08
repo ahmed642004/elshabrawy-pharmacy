@@ -7,7 +7,7 @@ import ProductPurchasePanel from "@/components/product/ProductPurchasePanel";
 import ProductTabs from "@/components/product/ProductTabs";
 import RelatedProducts from "@/components/product/RelatedProducts";
 import ProductReviews from "@/components/product/ProductReviews";
-import { getProductBySlug, getRelatedProducts } from "@/lib/queries";
+import { getProductBySlug, getRelatedProducts, isSignedIn } from "@/lib/queries";
 
 export default async function ProductPage({
   params,
@@ -18,9 +18,10 @@ export default async function ProductPage({
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const [related, tListing] = await Promise.all([
+  const [related, tListing, signedIn] = await Promise.all([
     getRelatedProducts(product.category, product.slug),
     getTranslations("listing"),
+    isSignedIn(),
   ]);
 
   return (
@@ -57,7 +58,13 @@ export default async function ProductPage({
         storage={product.storage}
       />
       {related.length > 0 && <RelatedProducts products={related} />}
-      <ProductReviews rating={product.rating} reviewCount={product.reviewCount} reviews={product.reviews} />
+      <ProductReviews
+        slug={product.slug}
+        isLoggedIn={signedIn}
+        rating={product.rating}
+        reviewCount={product.reviewCount}
+        reviews={product.reviews}
+      />
     </main>
   );
 }

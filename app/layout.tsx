@@ -3,6 +3,7 @@ import { Public_Sans, Inter, Cairo } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
 import { CartProvider } from "@/lib/cart-context";
+import ToastProvider from "@/components/ui/ToastProvider";
 import "./globals.css";
 
 const publicSans = Public_Sans({
@@ -48,7 +49,9 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <NextIntlClientProvider>
-          <CartProvider>{children}</CartProvider>
+          <CartProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </CartProvider>
         </NextIntlClientProvider>
       </body>
     </html>

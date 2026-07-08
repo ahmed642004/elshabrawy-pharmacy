@@ -6,8 +6,8 @@ import { getCartTotals, formatEGP } from "@/lib/cart-totals";
 
 export default function CheckoutSummary() {
   const t = useTranslations("cart");
-  const { items, promoApplied } = useCart();
-  const { subtotal, deliveryFree, deliveryFee, discount, total } = getCartTotals(items, promoApplied);
+  const { items, promo } = useCart();
+  const { subtotal, deliveryFree, deliveryFee, discount, total } = getCartTotals(items, promo?.discount ?? 0);
 
   return (
     <div className="flex flex-col gap-4 rounded-[14px] bg-white p-6 shadow-sm">
@@ -37,7 +37,7 @@ export default function CheckoutSummary() {
             {deliveryFree ? t("free") : formatEGP(deliveryFee)}
           </span>
         </div>
-        {promoApplied && (
+        {promo && (
           <div className="flex justify-between text-[13.5px] text-secondary-600">
             <span>{t("discount")}</span>
             <span>-{formatEGP(discount)}</span>
