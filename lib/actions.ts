@@ -291,54 +291,6 @@ async function assertAdmin(): Promise<void> {
   if (!isAdmin) throw new Error("Not authorized");
 }
 
-// Content-seeding helper: fetches an image server-side (no CORS concerns,
-// unlike doing this from the browser) and re-hosts it in Supabase Storage so
-// the storefront never depends on a third-party generation service's CDN
-// staying up. Replaces the category's previous image object in storage
-// (best-effort) so re-seeding doesn't accumulate orphans. Used via the
-// temporary /admin/seed-category-images page; a future category-management
-// admin page can reuse it for uploads.
-export async function setCategoryImage(categoryId: string, sourceUrl: string): Promise<void> {
-  await assertAdmin();
-
-  const res = await fetch(sourceUrl);
-  if (!res.ok) throw new Error("IMAGE_FETCH_FAILED");
-  const blob = await res.blob();
-
-  const supabase = await createClient();
-
-  const { data: existing } = await supabase
-    .from("categories")
-    .select("image_url")
-    .eq("id", categoryId)
-    .maybeSingle();
-
-  const path = `${categoryId}/${Date.now()}.png`;
-  const { error: uploadError } = await supabase.storage.from("category-images").upload(path, blob, {
-    contentType: blob.type || "image/png",
-  });
-  if (uploadError) throw uploadError;
-
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from("category-images").getPublicUrl(path);
-
-  const { error } = await supabase.from("categories").update({ image_url: publicUrl }).eq("id", categoryId);
-  if (error) throw error;
-
-  // Best-effort: the row already points at the new image, so a leftover
-  // object is only a stray file (same convention as setProductThumbnail).
-  const oldPath = existing?.image_url?.split("/category-images/")[1];
-  if (oldPath) {
-    await supabase.storage
-      .from("category-images")
-      .remove([oldPath])
-      .catch(() => {});
-  }
-
-  revalidatePath("/", "layout");
-}
-
 export async function updateOrderStatus(orderId: string, newStatus: Enums<"order_status">): Promise<void> {
   await assertAdmin();
   // Cancellation must go through cancel_order() so the stock create_order()
