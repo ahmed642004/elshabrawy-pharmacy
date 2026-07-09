@@ -19,7 +19,20 @@ interface CreateOrderInput {
   promoCode: string | null;
 }
 
-export async function createOrder(input: CreateOrderInput): Promise<string> {
+export type CreateOrderResult =
+  | { orderNumber: string }
+  | { error: "INSUFFICIENT_STOCK"; slug: string; available: number; requested: number }
+  | { error: "ORDER_FAILED" };
+
+// Returns a result instead of throwing for the RPC's expected failure modes.
+// Next.js Server Actions redact thrown Error messages to a generic
+// digest-only message in PRODUCTION builds only — next dev forwards the real
+// message, which is how the earlier "throw new Error(shortCode)" version of
+// this function passed every local test yet silently showed the generic
+// "Something went wrong" for every failure (including INSUFFICIENT_STOCK) in
+// production. A raw PostgrestError also isn't a plain Error instance, so its
+// .message never survives the boundary either way — read it here, server-side.
+export async function createOrder(input: CreateOrderInput): Promise<CreateOrderResult> {
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("create_order", {
@@ -29,13 +42,18 @@ export async function createOrder(input: CreateOrderInput): Promise<string> {
     p_promo_code: input.promoCode ?? undefined,
   });
 
-  // Server Actions only reliably forward plain Error messages across the
-  // client/server boundary — a raw PostgrestError (verified: its .message
-  // reaches server logs fine but gets redacted to a generic message on the
-  // client) doesn't survive. Re-throw as a clean Error with a short, safe
-  // code the client can match on.
-  if (error) throw new Error(error.message.includes("INSUFFICIENT_STOCK") ? "INSUFFICIENT_STOCK" : "ORDER_FAILED");
-  return data;
+  if (error) {
+    // create_order() raises 'INSUFFICIENT_STOCK:<slug>:<available>:<requested>'
+    // (migration 0028) — parse the numbers so the client can say exactly
+    // what's short, not just that something is. Falls back to the generic
+    // code if the message doesn't parse (defensive — should never happen).
+    const match = error.message.match(/INSUFFICIENT_STOCK:([^:]+):(\d+):(\d+)/);
+    if (match) {
+      return { error: "INSUFFICIENT_STOCK", slug: match[1], available: Number(match[2]), requested: Number(match[3]) };
+    }
+    return { error: "ORDER_FAILED" };
+  }
+  return { orderNumber: data };
 }
 
 // Called from the (client) cart context when the customer applies a promo
@@ -271,6 +289,54 @@ export async function setDefaultAddress(id: string): Promise<void> {
 async function assertAdmin(): Promise<void> {
   const { isAdmin } = await getAdminSession();
   if (!isAdmin) throw new Error("Not authorized");
+}
+
+// Content-seeding helper: fetches an image server-side (no CORS concerns,
+// unlike doing this from the browser) and re-hosts it in Supabase Storage so
+// the storefront never depends on a third-party generation service's CDN
+// staying up. Replaces the category's previous image object in storage
+// (best-effort) so re-seeding doesn't accumulate orphans. Used via the
+// temporary /admin/seed-category-images page; a future category-management
+// admin page can reuse it for uploads.
+export async function setCategoryImage(categoryId: string, sourceUrl: string): Promise<void> {
+  await assertAdmin();
+
+  const res = await fetch(sourceUrl);
+  if (!res.ok) throw new Error("IMAGE_FETCH_FAILED");
+  const blob = await res.blob();
+
+  const supabase = await createClient();
+
+  const { data: existing } = await supabase
+    .from("categories")
+    .select("image_url")
+    .eq("id", categoryId)
+    .maybeSingle();
+
+  const path = `${categoryId}/${Date.now()}.png`;
+  const { error: uploadError } = await supabase.storage.from("category-images").upload(path, blob, {
+    contentType: blob.type || "image/png",
+  });
+  if (uploadError) throw uploadError;
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from("category-images").getPublicUrl(path);
+
+  const { error } = await supabase.from("categories").update({ image_url: publicUrl }).eq("id", categoryId);
+  if (error) throw error;
+
+  // Best-effort: the row already points at the new image, so a leftover
+  // object is only a stray file (same convention as setProductThumbnail).
+  const oldPath = existing?.image_url?.split("/category-images/")[1];
+  if (oldPath) {
+    await supabase.storage
+      .from("category-images")
+      .remove([oldPath])
+      .catch(() => {});
+  }
+
+  revalidatePath("/", "layout");
 }
 
 export async function updateOrderStatus(orderId: string, newStatus: Enums<"order_status">): Promise<void> {

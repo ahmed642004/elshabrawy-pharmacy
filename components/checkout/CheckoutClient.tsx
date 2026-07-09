@@ -163,7 +163,7 @@ export default function CheckoutClient({ addresses }: { addresses: Address[] }) 
         };
 
     try {
-      const [num] = await Promise.all([
+      const [result] = await Promise.all([
         createOrder({
           items: items.map((i) => ({ slug: i.slug, qty: i.qty })),
           paymentMethod,
@@ -172,7 +172,22 @@ export default function CheckoutClient({ addresses }: { addresses: Address[] }) 
         }),
         new Promise((resolve) => setTimeout(resolve, 1000)),
       ]);
-      setOrderNumber(num);
+
+      if ("error" in result) {
+        if (result.error === "INSUFFICIENT_STOCK") {
+          // The RPC only knows the slug — look up the display name from the
+          // cart items already in scope rather than round-tripping again.
+          const name = items.find((i) => i.slug === result.slug)?.name ?? result.slug;
+          setOrderError(
+            t("errors.insufficientStock", { name, available: result.available, requested: result.requested })
+          );
+        } else {
+          setOrderError(t("orderError"));
+        }
+        return;
+      }
+
+      setOrderNumber(result.orderNumber);
       setOrderPlaced(true);
       clearCart();
 
@@ -190,12 +205,12 @@ export default function CheckoutClient({ addresses }: { addresses: Address[] }) 
           // the address for next time shouldn't surface as an order error.
         });
       }
-    } catch (err) {
-      // create_order() raises 'INSUFFICIENT_STOCK:<slug>' when a locked row
-      // can't cover the requested qty (see migration 0015) — surface that
-      // distinctly from the generic failure message.
-      const message = err instanceof Error ? err.message : "";
-      setOrderError(message.includes("INSUFFICIENT_STOCK") ? t("errors.outOfStock") : t("orderError"));
+    } catch {
+      // createOrder() no longer throws for its expected failure modes (see
+      // its comment — thrown Server Action errors are redacted to a generic
+      // message in production) — a throw here means something genuinely
+      // unexpected (network failure, etc.), so there's no code to match on.
+      setOrderError(t("orderError"));
     } finally {
       setPlacingOrder(false);
     }

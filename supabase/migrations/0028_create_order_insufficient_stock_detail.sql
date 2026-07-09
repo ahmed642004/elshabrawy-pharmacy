@@ -1,0 +1,109 @@
+-- Enrich the INSUFFICIENT_STOCK error with the actual numbers (available
+-- stock + requested qty), not just the slug, so the client can tell the
+-- customer "only 3 left, you're ordering 5" instead of a bare "out of
+-- stock" that reads as if the product isn't sold at all. Function body is
+-- otherwise byte-for-byte identical to 0016_promo_codes.sql.
+create or replace function public.create_order(
+  p_items jsonb,
+  p_payment_method payment_method,
+  p_shipping jsonb,
+  p_promo_code text default null
+)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_order_id uuid;
+  v_order_number text;
+  v_items jsonb;
+  v_item jsonb;
+  v_product record;
+  v_qty int;
+  v_subtotal numeric := 0;
+  v_delivery numeric;
+  v_discount numeric := 0;
+  v_total numeric;
+begin
+  if auth.uid() is null then
+    raise exception 'Sign in is required to place an order';
+  end if;
+
+  if p_items is null or jsonb_array_length(p_items) = 0 then
+    raise exception 'Cart is empty';
+  end if;
+
+  select jsonb_agg(jsonb_build_object('slug', slug, 'qty', qty))
+    into v_items
+    from (
+      select (elem ->> 'slug') as slug, sum((elem ->> 'qty')::int) as qty
+      from jsonb_array_elements(p_items) as elem
+      group by elem ->> 'slug'
+    ) merged;
+
+  if v_items is null or jsonb_array_length(v_items) = 0 then
+    raise exception 'Cart is empty';
+  end if;
+
+  for v_item in select * from jsonb_array_elements(v_items)
+  loop
+    v_qty := (v_item ->> 'qty')::int;
+    if v_qty is null or v_qty < 1 or v_qty > 99 then
+      raise exception 'Invalid quantity';
+    end if;
+
+    select id, slug, name, brand, price, stock_count
+      into v_product
+      from public.products
+      where slug = v_item ->> 'slug'
+      for update;
+
+    if not found then
+      raise exception 'Unknown product: %', v_item ->> 'slug';
+    end if;
+
+    if v_product.stock_count < v_qty then
+      raise exception 'INSUFFICIENT_STOCK:%:%:%', v_product.slug, v_product.stock_count, v_qty;
+    end if;
+
+    v_subtotal := v_subtotal + v_product.price * v_qty;
+  end loop;
+
+  v_delivery := case when v_subtotal >= 300 then 0 else 40 end;
+  v_discount := least(coalesce(public.validate_promo(p_promo_code, v_subtotal), 0), v_subtotal);
+  v_total := greatest(0, v_subtotal + v_delivery - v_discount);
+
+  v_order_number := 'EP-' || upper(substr(md5(gen_random_uuid()::text), 1, 6));
+
+  insert into public.orders (
+    order_number, user_id, subtotal, delivery_fee, discount, total, payment_method, shipping
+  )
+  values (
+    v_order_number, auth.uid(), v_subtotal, v_delivery, v_discount, v_total, p_payment_method, p_shipping
+  )
+  returning id into v_order_id;
+
+  for v_item in select * from jsonb_array_elements(v_items)
+  loop
+    v_qty := (v_item ->> 'qty')::int;
+
+    select id, name, brand, price
+      into v_product
+      from public.products
+      where slug = v_item ->> 'slug';
+
+    insert into public.order_items (order_id, product_slug, name, brand, price, qty)
+    values (v_order_id, v_item ->> 'slug', v_product.name, v_product.brand, v_product.price, v_qty);
+
+    update public.products
+      set stock_count = stock_count - v_qty
+      where id = v_product.id;
+  end loop;
+
+  return v_order_number;
+end;
+$$;
+
+revoke execute on function public.create_order(jsonb, payment_method, jsonb, text) from public, anon;
+grant execute on function public.create_order(jsonb, payment_method, jsonb, text) to authenticated;

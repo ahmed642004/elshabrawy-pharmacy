@@ -94,18 +94,21 @@ export type Database = {
       categories: {
         Row: {
           id: string
+          image_url: string | null
           label: string
           label_ar: string | null
           sort_order: number
         }
         Insert: {
           id: string
+          image_url?: string | null
           label: string
           label_ar?: string | null
           sort_order?: number
         }
         Update: {
           id?: string
+          image_url?: string | null
           label?: string
           label_ar?: string | null
           sort_order?: number

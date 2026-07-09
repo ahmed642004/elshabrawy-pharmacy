@@ -41,9 +41,18 @@ export default async function CategoryGrid() {
               href={`/category/${category.id}`}
               className="group relative aspect-square overflow-hidden rounded-[14px]"
             >
-              <div className={`absolute inset-0 flex items-center justify-center ${tone.bg}`}>
-                <Icon className={`h-9 w-9 transition-transform duration-300 group-hover:scale-110 ${tone.fg}`} strokeWidth={1.5} />
-              </div>
+              {category.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={category.imageUrl}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+              ) : (
+                <div className={`absolute inset-0 flex items-center justify-center ${tone.bg}`}>
+                  <Icon className={`h-9 w-9 transition-transform duration-300 group-hover:scale-110 ${tone.fg}`} strokeWidth={1.5} />
+                </div>
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-neutral-900/70 via-neutral-900/5 to-transparent" />
               {/* Second overlay fades in on hover (opacity, not background). */}
               <div className="absolute inset-0 bg-gradient-to-t from-neutral-900/85 via-neutral-900/15 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />

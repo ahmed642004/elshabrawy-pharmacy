@@ -34,16 +34,17 @@ export interface CategoryRow {
   id: string;
   label: string;
   labelAr: string | null;
+  imageUrl: string | null;
 }
 
 export async function getCategories(): Promise<CategoryRow[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("categories")
-    .select("id, label, label_ar")
+    .select("id, label, label_ar, image_url")
     .order("sort_order");
   if (error) throw error;
-  return data.map((c) => ({ id: c.id, label: c.label, labelAr: c.label_ar }));
+  return data.map((c) => ({ id: c.id, label: c.label, labelAr: c.label_ar, imageUrl: c.image_url }));
 }
 
 export async function getPopularProducts(): Promise<Product[]> {

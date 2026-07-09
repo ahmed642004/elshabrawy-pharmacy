@@ -205,7 +205,8 @@
       "cardNumber": "Card number is required",
       "expiry": "Expiry is required",
       "cvv": "CVV is required",
-      "outOfStock": "Some items in your cart are no longer in stock. Please review your cart."
+      "outOfStock": "Some items in your cart are no longer in stock. Please review your cart.",
+      "insufficientStock": "Only {available, plural, =0 {none} one {# left} other {# left}} of {name}, but you're ordering {requested}. Please adjust the quantity in your cart."
     },
     "paymentTitle": "Payment method",
     "methods": {
