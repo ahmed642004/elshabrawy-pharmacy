@@ -1,8 +1,19 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { ChevronRight, SearchX } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import ProductCard from "@/components/ProductCard";
 import { searchProducts } from "@/lib/queries";
+
+// Infinite query-param space — keep out of the index (robots.txt already
+// disallows /search; noindex covers pages reached via external links).
+export async function generateMetadata(): Promise<Metadata> {
+  const [t, tSearch] = await Promise.all([getTranslations("common"), getTranslations("search")]);
+  return {
+    title: `${tSearch("title")} | ${t("siteTitle")}`,
+    robots: { index: false, follow: true },
+  };
+}
 
 export default async function SearchPage({
   searchParams,

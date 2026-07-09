@@ -58,8 +58,56 @@ export default async function ProductPage({
     hasNotifyRequest(product.slug),
   ]);
 
+  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const stock = product.stock ?? "in";
+  // Product + BreadcrumbList structured data for rich results.
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Product",
+        name: product.name,
+        description: product.description ?? undefined,
+        image: product.images.length > 0 ? product.images : undefined,
+        url: `${base}/product/${product.slug}`,
+        ...(product.brand ? { brand: { "@type": "Brand", name: product.brand } } : {}),
+        ...(product.rating != null && product.reviewCount > 0
+          ? {
+              aggregateRating: {
+                "@type": "AggregateRating",
+                ratingValue: product.rating,
+                reviewCount: product.reviewCount,
+              },
+            }
+          : {}),
+        offers: {
+          "@type": "Offer",
+          price: product.price,
+          priceCurrency: "EGP",
+          availability:
+            stock === "out" ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
+          url: `${base}/product/${product.slug}`,
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: tListing("breadcrumbHome"), item: base },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: product.categoryLabel,
+            item: `${base}/category/${product.category}`,
+          },
+          { "@type": "ListItem", position: 3, name: product.name },
+        ],
+      },
+    ],
+  };
+
   return (
     <main className="mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-8 px-4 py-4 md:gap-10 md:px-10 md:py-8">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div className="flex items-center gap-1.5 text-[13px] text-neutral-500">
         <Link href="/" className="hover:text-neutral-700">
           {tListing("breadcrumbHome")}

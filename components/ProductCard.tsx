@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Pill, Plus, Bell } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCart } from "@/lib/cart-context";
@@ -73,11 +74,12 @@ export default function ProductCard({ product, className = "" }: ProductCardProp
       <div className="p-3">
         <div className="relative aspect-[4/3] overflow-hidden rounded-[10px]">
           {imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={imageUrl}
               alt={name}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              fill
+              sizes="(min-width: 1024px) 300px, (min-width: 768px) 45vw, 90vw"
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-neutral-100">

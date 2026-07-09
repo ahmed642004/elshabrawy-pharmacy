@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { ShieldCheck, Truck, Stethoscope, Plus, ArrowRight, TrendingUp } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
@@ -195,8 +196,14 @@ export default function Hero({ products = [] }: { products?: Product[] }) {
                     }`}
                   >
                     <span className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-white p-2">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={p.imageUrl} alt="" className="h-full w-full rounded-full object-contain" />
+                      <Image
+                        src={p.imageUrl!}
+                        alt=""
+                        width={96}
+                        height={96}
+                        priority={i === 0}
+                        className="h-full w-full rounded-full object-contain"
+                      />
                     </span>
                     <span className="line-clamp-1 px-4 text-center font-label text-[13px] font-bold">{p.name}</span>
                     <span className="font-headline text-[15px] font-extrabold">{formatEGP(p.price)}</span>

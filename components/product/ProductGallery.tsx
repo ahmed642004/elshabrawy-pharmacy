@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Pill, X, ZoomIn } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -29,8 +30,7 @@ export default function ProductGallery({ name, images = [] }: { name: string; im
               }`}
             >
               {hasImages ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={images[i]} alt="" className="h-full w-full object-cover" />
+                <Image src={images[i]} alt="" width={76} height={76} className="h-full w-full object-cover" />
               ) : (
                 <Pill className="h-6 w-6 text-neutral-300" strokeWidth={1.5} />
               )}
@@ -46,12 +46,18 @@ export default function ProductGallery({ name, images = [] }: { name: string; im
         >
           <div
             key={hasImages ? activeIndex : "ph"}
-            className="flex h-full w-full items-center justify-center"
+            className="relative flex h-full w-full items-center justify-center"
             style={{ animation: "ccFadeIn 250ms ease-out" }}
           >
             {activeImage ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={activeImage} alt={name} className="h-full w-full object-cover" />
+              <Image
+                src={activeImage}
+                alt={name}
+                fill
+                priority={activeIndex === 0}
+                sizes="(min-width: 1280px) 560px, (min-width: 768px) 50vw, 100vw"
+                className="object-cover"
+              />
             ) : (
               <Pill className="h-16 w-16 text-neutral-300" strokeWidth={1.5} />
             )}
@@ -69,10 +75,9 @@ export default function ProductGallery({ name, images = [] }: { name: string; im
           style={{ animation: "ccOverlayIn 200ms ease-out" }}
         >
           <div className="relative aspect-square w-[min(680px,90vw)]" style={{ animation: "ccScaleIn 220ms ease-out" }}>
-            <div className="flex h-full w-full items-center justify-center rounded-[16px] bg-neutral-100">
+            <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-[16px] bg-neutral-100">
               {activeImage ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={activeImage} alt={name} className="h-full w-full object-cover" />
+                <Image src={activeImage} alt={name} fill sizes="min(680px, 90vw)" className="object-cover" />
               ) : (
                 <Pill className="h-24 w-24 text-neutral-300" strokeWidth={1.5} />
               )}

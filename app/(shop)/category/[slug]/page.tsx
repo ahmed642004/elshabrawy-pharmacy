@@ -35,6 +35,7 @@ export async function generateMetadata({
 
   return {
     title: `${label} | ${t("siteTitle")}`,
+    description: t("siteDescription"),
     alternates: { canonical: `/category/${slug}` },
   };
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { X, Pill } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -107,8 +108,7 @@ export default function ReviewPrompt({ products }: { products: PendingReview[] }
         <div className="flex items-center gap-3">
           <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-[12px] bg-neutral-100">
             {current.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={current.imageUrl} alt="" className="h-full w-full object-cover" />
+              <Image src={current.imageUrl} alt="" width={56} height={56} className="h-full w-full object-cover" />
             ) : (
               <Pill className="h-6 w-6 text-neutral-300" strokeWidth={1.5} />
             )}

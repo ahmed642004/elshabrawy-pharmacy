@@ -2,13 +2,13 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Plus, Search, MapPin, User, ShoppingCart, Menu, X, LogOut, Pill, LayoutDashboard, Package } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
 import { useCart } from "@/lib/cart-context";
-import { createClient } from "@/lib/supabase/client";
 import { formatEGP } from "@/lib/cart-totals";
 
 const NAV_LINKS = [
@@ -74,8 +74,7 @@ function LiveSearchDropdown({ open, loading, results, query, onClose, onSeeAll }
               >
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-neutral-100">
                   {r.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={r.imageUrl} alt="" className="h-full w-full object-cover" />
+                    <Image src={r.imageUrl} alt="" width={40} height={40} className="h-full w-full object-cover" />
                   ) : (
                     <Pill className="h-5 w-5 text-neutral-300" strokeWidth={1.5} />
                   )}
@@ -148,6 +147,9 @@ export default function HeaderClient({
     setLiveLoading(true);
 
     const timer = setTimeout(async () => {
+      // Lazy-loaded so supabase-js stays out of the initial bundle — it's
+      // only needed once the user actually types a search query.
+      const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
       const escaped = q.replace(/[%_]/g, (c) => `\\${c}`);
       const pattern = `%${escaped}%`;
@@ -196,6 +198,7 @@ export default function HeaderClient({
   }
 
   async function handleSignOut() {
+    const { createClient } = await import("@/lib/supabase/client");
     const supabase = createClient();
     await supabase.auth.signOut();
     setAccountMenuOpen(false);

@@ -1,7 +1,7 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import type { createClient } from "@/lib/supabase/client";
 import { validatePromo } from "@/lib/actions";
 import { getCartTotals, MAX_ITEM_QTY } from "@/lib/cart-totals";
 import type { StockState } from "@/components/ProductCard";
@@ -87,7 +87,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [promo, setPromo] = useState<AppliedPromo | null>(null);
   const [promoError, setPromoError] = useState(false);
 
-  const supabase = useMemo(() => createClient(), []);
+  // supabase-js is only needed for signed-in cart sync; it's dynamically
+  // imported below so it stays out of the initial bundle every storefront
+  // page hydrates with. Null until that import resolves.
+  const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
   // Mirrors the latest items/savedItems for the async sign-in merge below —
   // by the time the server cart response arrives, state may have moved past
   // what the closure captured.
@@ -105,7 +108,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const stored = JSON.parse(raw) as StoredCart;
       // One-time hydration from localStorage, which isn't available during SSR.
       // Clamped in case it predates MAX_ITEM_QTY or was hand-edited.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setItems(clampCartItems(stored.items ?? []));
       setSavedItems(clampCartItems(stored.savedItems ?? []));
       setPromo(stored.promo ?? null);
@@ -124,9 +126,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // cart merged from and written back to the cart_items table, so it follows
   // them across devices. Guests keep the pure-localStorage behavior.
   useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    let cancelled = false;
+    let subscription: { unsubscribe: () => void } | undefined;
+
+    // Deferred to idle time so the supabase-js chunk fetch/eval stays off
+    // the critical rendering path — cart sync starting a moment later is
+    // invisible to the user.
+    const whenIdle: (cb: () => void) => void =
+      typeof requestIdleCallback === "function"
+        ? (cb) => requestIdleCallback(cb, { timeout: 3000 })
+        : (cb) => setTimeout(cb, 1500);
+
+    whenIdle(() => {
+      if (cancelled) return;
+      import("@/lib/supabase/client").then((mod) => {
+        if (cancelled) return;
+      const supabase = mod.createClient();
+      supabaseRef.current = supabase;
+
+      ({
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((event, session) => {
       // Only (re)sync on events that actually change who's signed in.
       // TOKEN_REFRESHED (and similar) fire periodically for a long-lived
       // session and must not trigger a resync — the merge below reads
@@ -186,16 +206,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setItems(mergedItems);
         setSavedItems(mergedSaved);
       }, 0);
+      }));
+      });
     });
 
-    return () => subscription.unsubscribe();
-  }, [supabase]);
+    return () => {
+      cancelled = true;
+      subscription?.unsubscribe();
+    };
+  }, []);
 
   // Debounced write-through: any cart change while synced replaces the whole
   // server cart (small carts make a full replace simpler and more robust
   // than per-operation diffing).
   useEffect(() => {
-    if (!syncReadyRef.current || !syncUserRef.current) return;
+    // syncReady only flips true after the initial merge, which requires the
+    // lazy supabase import to have resolved — so supabaseRef is set here.
+    const supabase = supabaseRef.current;
+    if (!syncReadyRef.current || !syncUserRef.current || !supabase) return;
     const timer = setTimeout(() => {
       const payload = [
         ...items.map((i) => ({ slug: i.slug, qty: i.qty, saved: false })),
@@ -210,7 +238,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       );
     }, PUSH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [items, savedItems, supabase]);
+  }, [items, savedItems]);
 
   const addItem = useCallback((item: Omit<CartItem, "qty">, qty = 1) => {
     setItems((prev) => mergeItemInto(prev, { ...item, qty }));
