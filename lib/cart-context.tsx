@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import type { createClient } from "@/lib/supabase/client";
 import { validatePromo } from "@/lib/actions";
 import { getCartTotals, MAX_ITEM_QTY } from "@/lib/cart-totals";
@@ -100,6 +101,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // so a pre-merge local state can't clobber the server copy).
   const syncUserRef = useRef<string | null>(null);
   const syncReadyRef = useRef(false);
+  // Sync bootstrap: whether the supabase import has been kicked off, and the
+  // cookie-gated starter so the pathname effect below can re-invoke it.
+  const startedSyncRef = useRef(false);
+  const startSyncRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -125,20 +130,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // Server sync, layered on top of localStorage: signed-in users get their
   // cart merged from and written back to the cart_items table, so it follows
   // them across devices. Guests keep the pure-localStorage behavior.
+  //
+  // supabase-js is only imported once a Supabase auth cookie ("sb-…") is
+  // actually present — guests never download the chunk at all. The cookie
+  // check re-runs on route changes and window focus, which covers signing in
+  // during this SPA session (/auth sets the cookie, then navigates away) and
+  // in another tab.
   useEffect(() => {
     let cancelled = false;
     let subscription: { unsubscribe: () => void } | undefined;
 
-    // Deferred to idle time so the supabase-js chunk fetch/eval stays off
-    // the critical rendering path — cart sync starting a moment later is
-    // invisible to the user.
+    // Deferred to idle time so the chunk fetch/eval stays off the critical
+    // rendering path — cart sync starting a moment later is invisible.
     const whenIdle: (cb: () => void) => void =
       typeof requestIdleCallback === "function"
         ? (cb) => requestIdleCallback(cb, { timeout: 3000 })
         : (cb) => setTimeout(cb, 1500);
 
-    whenIdle(() => {
-      if (cancelled) return;
+    const start = () => {
+      if (cancelled || startedSyncRef.current) return;
+      if (!document.cookie.includes("sb-")) return;
+      startedSyncRef.current = true;
       import("@/lib/supabase/client").then((mod) => {
         if (cancelled) return;
       const supabase = mod.createClient();
@@ -208,13 +220,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }, 0);
       }));
       });
-    });
+    };
+
+    startSyncRef.current = start;
+    whenIdle(start);
+    window.addEventListener("focus", start);
 
     return () => {
       cancelled = true;
+      startSyncRef.current = null;
+      window.removeEventListener("focus", start);
       subscription?.unsubscribe();
     };
   }, []);
+
+  // Route changes re-run the cookie check: signing in on /auth sets the
+  // Supabase cookie and then navigates, which is when sync should begin.
+  const pathname = usePathname();
+  useEffect(() => {
+    startSyncRef.current?.();
+  }, [pathname]);
 
   // Debounced write-through: any cart change while synced replaces the whole
   // server cart (small carts make a full replace simpler and more robust
