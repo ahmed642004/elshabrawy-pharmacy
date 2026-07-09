@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
+import { siteUrl } from "@/lib/site";
 
 // sitemap.ts is generated at build time with no request context, so it
 // can't use lib/supabase/server.ts (that createClient() calls next/headers'
@@ -12,7 +13,7 @@ const supabase = createClient<Database>(
 );
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const base = siteUrl();
 
   const [{ data: products }, { data: categories }] = await Promise.all([
     supabase.from("products").select("slug, created_at"),
@@ -23,6 +24,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: base, changeFrequency: "daily", priority: 1 },
     { url: `${base}/category`, changeFrequency: "daily", priority: 0.8 },
     { url: `${base}/category/offers`, changeFrequency: "daily", priority: 0.8 },
+    { url: `${base}/about`, changeFrequency: "monthly", priority: 0.4 },
+    { url: `${base}/contact`, changeFrequency: "monthly", priority: 0.4 },
     ...(categories ?? []).map((c) => ({
       url: `${base}/category/${c.id}`,
       changeFrequency: "daily" as const,

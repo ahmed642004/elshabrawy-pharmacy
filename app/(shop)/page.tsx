@@ -7,6 +7,7 @@ import TrustStrip from "@/components/home/TrustStrip";
 import Newsletter from "@/components/home/Newsletter";
 import Reveal from "@/components/ui/Reveal";
 import { getPopularProducts } from "@/lib/queries";
+import { siteUrl } from "@/lib/site";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
@@ -17,7 +18,7 @@ export default async function Home() {
   // The hero showcase needs product images; slice a few for the rotation.
   const heroProducts = products.filter((p) => p.imageUrl).slice(0, 4);
 
-  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const base = siteUrl();
   // Organization + WebSite (with SearchAction) structured data for rich results.
   const jsonLd = {
     "@context": "https://schema.org",

@@ -122,6 +122,7 @@ export async function getFilteredProducts(filters: ProductFilters): Promise<List
 export interface ProductDetail extends Product {
   category: string;
   categoryLabel: string;
+  sku: string | null;
   rating: number | null;
   reviewCount: number;
   description: string | null;
@@ -155,6 +156,7 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
     ...toProduct(row),
     category: row.category_id ?? "",
     categoryLabel: row.categories?.label ?? "",
+    sku: row.sku,
     rating: row.rating != null ? Number(row.rating) : null,
     reviewCount: row.review_count,
     description: row.description,

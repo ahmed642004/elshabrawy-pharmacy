@@ -56,7 +56,30 @@
     "offers": "Offers",
     "support": "Support",
     "track": "Track an order",
+    "about": "About us",
+    "contact": "Contact us",
     "copyright": "© {year} Elshabrawy Pharmacy. Licensed pharmacy, EDA-registered."
+  },
+  "about": {
+    "title": "About us",
+    "metaDescription": "Learn about Elshabrawy Pharmacy — a licensed Egyptian pharmacy delivering original cosmetics, vitamins, and supplements to your door.",
+    "intro": "Elshabrawy Pharmacy is a licensed, EDA-registered Egyptian pharmacy. We bring the trusted neighborhood pharmacy experience online — original products, honest advice, and fast delivery straight to your door.",
+    "missionTitle": "Our mission",
+    "missionBody": "We believe everyday health and self-care should be simple. Our catalog focuses on cosmetics, vitamins, supplements, hair and personal care, and home health devices — everything you need for daily wellbeing, without a prescription.",
+    "qualityTitle": "Original products, guaranteed",
+    "qualityBody": "Every product we sell is sourced through authorized distributors and stored under pharmacy-grade conditions. Our pharmacists review each brand we carry, so what arrives at your door is exactly what the manufacturer intended.",
+    "deliveryTitle": "Fast delivery, real support",
+    "deliveryBody": "Orders are prepared by our team and delivered quickly within Greater Cairo. Have a question about a product or your order? Our pharmacists are available around the clock through your account."
+  },
+  "contact": {
+    "title": "Contact us",
+    "metaDescription": "Get in touch with Elshabrawy Pharmacy — order questions, product advice, and support from licensed pharmacists.",
+    "intro": "We are here to help with product questions, order updates, and health advice you can trust.",
+    "ordersTitle": "Questions about an order",
+    "ordersBody": "Sign in to your account to see live order status, delivery details, and your full order history. Every order can be tracked from the moment it is confirmed until it reaches your door.",
+    "ordersCta": "Track your orders",
+    "supportTitle": "Product advice",
+    "supportBody": "Not sure which vitamin, supplement, or skincare product is right for you? Browse the product pages for detailed descriptions, dosage guidance, and verified customer reviews — or ask our pharmacists when your order is delivered."
   },
   "home": {
     "hero": {
@@ -116,6 +139,9 @@
   "listing": {
     "breadcrumbHome": "Home",
     "allProducts": "All products",
+    "metaDescription": "Shop {category} online at Elshabrawy Pharmacy — original products, licensed pharmacists, and fast delivery to your door.",
+    "metaDescriptionAll": "Browse all cosmetics, vitamins, supplements, and personal care at Elshabrawy Pharmacy — original products with fast delivery.",
+    "metaDescriptionOffers": "Today's offers and deals at Elshabrawy Pharmacy — save on cosmetics, vitamins, and supplements with fast delivery.",
     "productCount": "{count, plural, one {# product} other {# products}}",
     "filters": "Filters",
     "closeFilters": "Close filters",

@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { LogIn } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import Button from "@/components/ui/Button";
 import AccountClient from "@/components/account/AccountClient";
 import { getAccountData } from "@/lib/queries";
+
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 export default async function AccountPage() {
   const account = await getAccountData();

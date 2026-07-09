@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
 import { CartProvider } from "@/lib/cart-context";
 import ToastProvider from "@/components/ui/ToastProvider";
+import { siteUrl } from "@/lib/site";
 import "./globals.css";
 
 // All three are variable fonts — omitting `weight` loads a single variable
@@ -44,14 +45,22 @@ const cairo = Cairo({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("common");
+  const [t, locale] = await Promise.all([getTranslations("common"), getLocale()]);
   return {
-    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
-    title: t("siteTitle"),
+    metadataBase: new URL(siteUrl()),
+    title: {
+      default: t("siteTitle"),
+      template: `%s | ${t("siteTitle")}`,
+    },
     description: t("siteDescription"),
+    applicationName: t("siteTitle"),
     openGraph: {
       siteName: t("siteTitle"),
       type: "website",
+      locale: locale === "ar" ? "ar_EG" : "en_US",
+    },
+    twitter: {
+      card: "summary_large_image",
     },
   };
 }

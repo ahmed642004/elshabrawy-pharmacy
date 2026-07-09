@@ -13,7 +13,14 @@ const FOOTER_COLUMNS = [
       { key: "offers", href: "/category/offers" },
     ],
   },
-  { titleKey: "support", links: [{ key: "track", href: "/account/orders" }] },
+  {
+    titleKey: "support",
+    links: [
+      { key: "track", href: "/account/orders" },
+      { key: "about", href: "/about" },
+      { key: "contact", href: "/contact" },
+    ],
+  },
 ] as const;
 
 export default function Footer() {

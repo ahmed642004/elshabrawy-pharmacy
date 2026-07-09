@@ -4,6 +4,8 @@ import { getLocale, getTranslations } from "next-intl/server";
 import CategoryListingClient from "@/components/listing/CategoryListingClient";
 import { categoryLabel, resolveCategorySlug } from "@/lib/categories";
 import { getFilteredProducts, getCategories, getBrands } from "@/lib/queries";
+import { siteUrl } from "@/lib/site";
+import { listingJsonLd } from "@/lib/seo";
 
 function parseArrayParam(value?: string): string[] {
   return value ? value.split(",").filter(Boolean) : [];
@@ -15,28 +17,38 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const [categories, locale, t] = await Promise.all([
+  const [categories, locale, t, tListing] = await Promise.all([
     getCategories(),
     getLocale(),
     getTranslations("common"),
+    getTranslations("listing"),
   ]);
 
-  let label: string;
+  const canonical = { alternates: { canonical: `/category/${slug}` } };
   if (slug === "offers") {
-    label = (await getTranslations("listing"))("offersTitle");
-  } else {
-    const resolvedId = resolveCategorySlug(
-      slug,
-      categories.map((c) => c.id)
-    );
-    const category = categories.find((c) => c.id === resolvedId);
-    label = category ? categoryLabel(category, locale) : t("siteTitle");
+    return {
+      title: tListing("offersTitle"),
+      description: tListing("metaDescriptionOffers"),
+      ...canonical,
+    };
   }
 
+  const resolvedId = resolveCategorySlug(
+    slug,
+    categories.map((c) => c.id)
+  );
+  const category = categories.find((c) => c.id === resolvedId);
+  if (!category) {
+    // Unknown slug: absolute title so the "%s | siteTitle" template doesn't
+    // render the site name twice.
+    return { title: { absolute: t("siteTitle") }, description: t("siteDescription"), ...canonical };
+  }
+
+  const label = categoryLabel(category, locale);
   return {
-    title: `${label} | ${t("siteTitle")}`,
-    description: t("siteDescription"),
-    alternates: { canonical: `/category/${slug}` },
+    title: label,
+    description: tListing("metaDescription", { category: label }),
+    ...canonical,
   };
 }
 
@@ -67,7 +79,7 @@ export default async function CategoryPage({
   const selectedPriceRanges = parseArrayParam(sp.price);
   const sort = sp.sort ?? "recommended";
 
-  const [products, brands] = await Promise.all([
+  const [products, brands, locale, tListing] = await Promise.all([
     getFilteredProducts({
       categoryIds: selectedCategories,
       brands: selectedBrands,
@@ -76,17 +88,30 @@ export default async function CategoryPage({
       onSale: isOffers,
     }),
     getBrands(),
+    getLocale(),
+    getTranslations("listing"),
   ]);
 
+  const category = categories.find((c) => c.id === initialCategoryId);
+  const pageName = isOffers
+    ? tListing("offersTitle")
+    : category
+      ? categoryLabel(category, locale)
+      : tListing("allProducts");
+  const jsonLd = listingJsonLd(siteUrl(), tListing("breadcrumbHome"), pageName, products);
+
   return (
-    <Suspense fallback={null}>
-      <CategoryListingClient
-        initialCategoryId={initialCategoryId}
-        products={products}
-        categories={categories}
-        brands={brands}
-        offersMode={isOffers}
-      />
-    </Suspense>
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <Suspense fallback={null}>
+        <CategoryListingClient
+          initialCategoryId={initialCategoryId}
+          products={products}
+          categories={categories}
+          brands={brands}
+          offersMode={isOffers}
+        />
+      </Suspense>
+    </>
   );
 }

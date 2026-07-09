@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ChevronRight } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
+import { siteUrl } from "@/lib/site";
 import ProductGallery from "@/components/product/ProductGallery";
 import ProductPurchasePanel from "@/components/product/ProductPurchasePanel";
 import ProductTabs from "@/components/product/ProductTabs";
@@ -26,17 +27,26 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const [product, t] = await Promise.all([getProductBySlug(slug), getTranslations("common")]);
-  if (!product) return { title: t("siteTitle") };
+  const [product, t, locale] = await Promise.all([
+    getProductBySlug(slug),
+    getTranslations("common"),
+    getLocale(),
+  ]);
+  if (!product) return { title: { absolute: t("siteTitle") } };
 
   const description = truncateForMeta(product.description ?? "", 160) || t("siteDescription");
   return {
-    title: `${product.name} | ${t("siteTitle")}`,
+    title: product.name,
     description,
     alternates: { canonical: `/product/${slug}` },
+    // Next replaces the root openGraph object wholesale (no deep merge), so
+    // siteName/locale must be re-declared here or product pages lose them.
     openGraph: {
       title: product.name,
       description,
+      siteName: t("siteTitle"),
+      type: "website",
+      locale: locale === "ar" ? "ar_EG" : "en_US",
       images: product.images[0] ? [product.images[0]] : undefined,
     },
   };
@@ -58,7 +68,7 @@ export default async function ProductPage({
     hasNotifyRequest(product.slug),
   ]);
 
-  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const base = siteUrl();
   const stock = product.stock ?? "in";
   // Product + BreadcrumbList structured data for rich results.
   const jsonLd = {
@@ -70,6 +80,8 @@ export default async function ProductPage({
         description: product.description ?? undefined,
         image: product.images.length > 0 ? product.images : undefined,
         url: `${base}/product/${product.slug}`,
+        ...(product.sku ? { sku: product.sku } : {}),
+        ...(product.categoryLabel ? { category: product.categoryLabel } : {}),
         ...(product.brand ? { brand: { "@type": "Brand", name: product.brand } } : {}),
         ...(product.rating != null && product.reviewCount > 0
           ? {
@@ -78,6 +90,17 @@ export default async function ProductPage({
                 ratingValue: product.rating,
                 reviewCount: product.reviewCount,
               },
+            }
+          : {}),
+        ...(product.reviews.length > 0
+          ? {
+              review: product.reviews.slice(0, 10).map((r) => ({
+                "@type": "Review",
+                author: { "@type": "Person", name: r.authorName },
+                reviewRating: { "@type": "Rating", ratingValue: r.rating },
+                ...(r.body ? { reviewBody: r.body } : {}),
+                datePublished: r.createdAt.slice(0, 10),
+              })),
             }
           : {}),
         offers: {

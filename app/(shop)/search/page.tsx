@@ -8,9 +8,9 @@ import { searchProducts } from "@/lib/queries";
 // Infinite query-param space — keep out of the index (robots.txt already
 // disallows /search; noindex covers pages reached via external links).
 export async function generateMetadata(): Promise<Metadata> {
-  const [t, tSearch] = await Promise.all([getTranslations("common"), getTranslations("search")]);
+  const tSearch = await getTranslations("search");
   return {
-    title: `${tSearch("title")} | ${t("siteTitle")}`,
+    title: tSearch("title"),
     robots: { index: false, follow: true },
   };
 }
