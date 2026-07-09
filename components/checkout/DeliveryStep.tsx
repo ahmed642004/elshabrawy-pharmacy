@@ -3,6 +3,8 @@
 import { PlusCircle, Truck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Input from "@/components/ui/Input";
+import UseLocationButton from "@/components/checkout/UseLocationButton";
+import type { GeoFix, ReverseGeocodeResult } from "@/lib/geolocation";
 
 export interface Address {
   id: string;
@@ -11,6 +13,9 @@ export interface Address {
   phone: string;
   address: string;
   city: string;
+  lat?: number | null;
+  lng?: number | null;
+  geoAccuracyM?: number | null;
 }
 
 export interface DeliveryForm {
@@ -19,6 +24,9 @@ export interface DeliveryForm {
   address: string;
   city: string;
   notes: string;
+  lat: number | null;
+  lng: number | null;
+  geoAccuracyM: number | null;
 }
 
 interface DeliveryStepProps {
@@ -30,6 +38,8 @@ interface DeliveryStepProps {
   onSelectAddress: (id: string) => void;
   onSelectAddNew: () => void;
   onFormChange: (field: keyof DeliveryForm, value: string) => void;
+  onLocationCaptured: (fix: GeoFix, geocoded: ReverseGeocodeResult | null) => void;
+  onLocationCleared: () => void;
 }
 
 export default function DeliveryStep({
@@ -41,6 +51,8 @@ export default function DeliveryStep({
   onSelectAddress,
   onSelectAddNew,
   onFormChange,
+  onLocationCaptured,
+  onLocationCleared,
 }: DeliveryStepProps) {
   const t = useTranslations("checkout");
   const showEta = (!!selectedAddressId && !addingNew) || (addingNew && form.city.trim().length > 0);
@@ -92,6 +104,11 @@ export default function DeliveryStep({
 
       {addingNew && (
         <div className="flex flex-col gap-3.5 rounded-[14px] border border-neutral-200 bg-white p-4.5">
+          <UseLocationButton
+            captured={form.lat != null && form.lng != null ? { accuracyM: form.geoAccuracyM ?? 0 } : null}
+            onCaptured={onLocationCaptured}
+            onCleared={onLocationCleared}
+          />
           <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
             <div>
               <Input

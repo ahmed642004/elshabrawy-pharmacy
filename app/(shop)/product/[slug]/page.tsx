@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { ChevronRight } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import ProductGallery from "@/components/product/ProductGallery";
@@ -7,7 +8,39 @@ import ProductPurchasePanel from "@/components/product/ProductPurchasePanel";
 import ProductTabs from "@/components/product/ProductTabs";
 import RelatedProducts from "@/components/product/RelatedProducts";
 import ProductReviews from "@/components/product/ProductReviews";
-import { getProductBySlug, getRelatedProducts, isSignedIn } from "@/lib/queries";
+import { getProductBySlug, getRelatedProducts, hasNotifyRequest, isSignedIn } from "@/lib/queries";
+
+// Collapses whitespace and cuts at the last word boundary before `max` chars
+// rather than mid-word — matters for Arabic descriptions especially.
+function truncateForMeta(text: string, max: number): string {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (clean.length <= max) return clean;
+  const cut = clean.slice(0, max);
+  const lastSpace = cut.lastIndexOf(" ");
+  return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trim()}…`;
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const [product, t] = await Promise.all([getProductBySlug(slug), getTranslations("common")]);
+  if (!product) return { title: t("siteTitle") };
+
+  const description = truncateForMeta(product.description ?? "", 160) || t("siteDescription");
+  return {
+    title: `${product.name} | ${t("siteTitle")}`,
+    description,
+    alternates: { canonical: `/product/${slug}` },
+    openGraph: {
+      title: product.name,
+      description,
+      images: product.images[0] ? [product.images[0]] : undefined,
+    },
+  };
+}
 
 export default async function ProductPage({
   params,
@@ -18,10 +51,11 @@ export default async function ProductPage({
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const [related, tListing, signedIn] = await Promise.all([
+  const [related, tListing, signedIn, notifyRequested] = await Promise.all([
     getRelatedProducts(product.category, product.slug),
     getTranslations("listing"),
     isSignedIn(),
+    hasNotifyRequest(product.slug),
   ]);
 
   return (
@@ -47,6 +81,7 @@ export default async function ProductPage({
           stock={product.stock ?? "in"}
           rating={product.rating}
           reviewCount={product.reviewCount}
+          notifyRequested={notifyRequested}
         />
       </div>
 

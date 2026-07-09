@@ -11,28 +11,50 @@ import Badge from "@/components/ui/Badge";
 import IconButton from "@/components/ui/IconButton";
 import { updateProfile, saveAddress, updateAddress, deleteAddress, setDefaultAddress } from "@/lib/actions";
 import type { AccountData, AccountAddress } from "@/lib/queries";
+import UseLocationButton from "@/components/checkout/UseLocationButton";
+import type { GeoFix, ReverseGeocodeResult } from "@/lib/geolocation";
 
 interface AddressForm {
   recipient: string;
   phone: string;
   street: string;
   city: string;
+  lat: number | null;
+  lng: number | null;
+  geoAccuracyM: number | null;
 }
 
-const EMPTY_ADDRESS: AddressForm = { recipient: "", phone: "", street: "", city: "" };
+const EMPTY_ADDRESS: AddressForm = {
+  recipient: "",
+  phone: "",
+  street: "",
+  city: "",
+  lat: null,
+  lng: null,
+  geoAccuracyM: null,
+};
 
 function AddressFields({
   form,
   onChange,
+  onLocationCaptured,
+  onLocationCleared,
   errors,
 }: {
   form: AddressForm;
-  onChange: (field: keyof AddressForm, value: string) => void;
+  onChange: (field: "recipient" | "phone" | "street" | "city", value: string) => void;
+  onLocationCaptured: (fix: GeoFix, geocoded: ReverseGeocodeResult | null) => void;
+  onLocationCleared: () => void;
   errors: Partial<Record<keyof AddressForm, string>>;
 }) {
   const t = useTranslations("account");
   return (
     <div className="flex flex-col gap-3">
+      <UseLocationButton
+        captured={form.lat != null && form.lng != null ? { accuracyM: form.geoAccuracyM ?? 0 } : null}
+        onCaptured={onLocationCaptured}
+        onCleared={onLocationCleared}
+      />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <Input
@@ -103,8 +125,32 @@ export default function AccountClient({ account }: { account: AccountData }) {
       setAddressForm(EMPTY_ADDRESS);
     } else {
       setAddressFormFor(target.id);
-      setAddressForm({ recipient: target.recipient, phone: target.phone, street: target.street, city: target.city });
+      setAddressForm({
+        recipient: target.recipient,
+        phone: target.phone,
+        street: target.street,
+        city: target.city,
+        lat: target.lat,
+        lng: target.lng,
+        geoAccuracyM: target.geoAccuracyM,
+      });
     }
+  }
+
+  // Prefill only empty fields — never overwrite text the user already typed.
+  function handleLocationCaptured(fix: GeoFix, geocoded: ReverseGeocodeResult | null) {
+    setAddressForm((prev) => ({
+      ...prev,
+      lat: fix.lat,
+      lng: fix.lng,
+      geoAccuracyM: fix.accuracyM,
+      street: !prev.street.trim() && geocoded?.street ? geocoded.street : prev.street,
+      city: !prev.city.trim() && geocoded?.city ? geocoded.city : prev.city,
+    }));
+  }
+
+  function handleLocationCleared() {
+    setAddressForm((prev) => ({ ...prev, lat: null, lng: null, geoAccuracyM: null }));
   }
 
   function validateAddress(): Partial<Record<keyof AddressForm, string>> {
@@ -223,6 +269,8 @@ export default function AccountClient({ account }: { account: AccountData }) {
                     <AddressFields
                       form={addressForm}
                       onChange={(field, value) => setAddressForm((prev) => ({ ...prev, [field]: value }))}
+                      onLocationCaptured={handleLocationCaptured}
+                      onLocationCleared={handleLocationCleared}
                       errors={addressErrors}
                     />
                     <div className="flex gap-2.5">
@@ -285,6 +333,8 @@ export default function AccountClient({ account }: { account: AccountData }) {
                 <AddressFields
                   form={addressForm}
                   onChange={(field, value) => setAddressForm((prev) => ({ ...prev, [field]: value }))}
+                  onLocationCaptured={handleLocationCaptured}
+                  onLocationCleared={handleLocationCleared}
                   errors={addressErrors}
                 />
                 <div className="flex gap-2.5">

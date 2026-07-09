@@ -3,6 +3,11 @@ import type { CartItem } from "@/lib/cart-context";
 const FREE_DELIVERY_THRESHOLD = 300;
 const DELIVERY_FEE = 40;
 
+// UX cap on a single line's quantity — well under create_order()'s hard
+// server-side limit of 99, just high enough to stop an accidental runaway
+// increment click from silently building an absurd cart.
+export const MAX_ITEM_QTY = 10;
+
 export interface CartTotals {
   subtotal: number;
   deliveryFree: boolean;

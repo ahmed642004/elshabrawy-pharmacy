@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Package, Boxes, Plus, Stethoscope, Store } from "lucide-react";
+import { LayoutDashboard, Package, Boxes, TicketPercent, Star, Plus, Stethoscope, Store } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/orders", label: "Orders", icon: Package },
   { href: "/admin/inventory", label: "Inventory", icon: Boxes },
+  { href: "/admin/promos", label: "Promos", icon: TicketPercent },
+  { href: "/admin/reviews", label: "Reviews", icon: Star },
 ];
 
 function Logo() {

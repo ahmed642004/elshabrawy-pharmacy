@@ -1,10 +1,42 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
+import { getLocale, getTranslations } from "next-intl/server";
 import CategoryListingClient from "@/components/listing/CategoryListingClient";
-import { resolveCategorySlug } from "@/lib/categories";
+import { categoryLabel, resolveCategorySlug } from "@/lib/categories";
 import { getFilteredProducts, getCategories, getBrands } from "@/lib/queries";
 
 function parseArrayParam(value?: string): string[] {
   return value ? value.split(",").filter(Boolean) : [];
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const [categories, locale, t] = await Promise.all([
+    getCategories(),
+    getLocale(),
+    getTranslations("common"),
+  ]);
+
+  let label: string;
+  if (slug === "offers") {
+    label = (await getTranslations("listing"))("offersTitle");
+  } else {
+    const resolvedId = resolveCategorySlug(
+      slug,
+      categories.map((c) => c.id)
+    );
+    const category = categories.find((c) => c.id === resolvedId);
+    label = category ? categoryLabel(category, locale) : t("siteTitle");
+  }
+
+  return {
+    title: `${label} | ${t("siteTitle")}`,
+    alternates: { canonical: `/category/${slug}` },
+  };
 }
 
 export default async function CategoryPage({

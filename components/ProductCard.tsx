@@ -1,10 +1,12 @@
 "use client";
 
+import { useTransition } from "react";
 import Link from "next/link";
 import { Pill, Plus, Bell } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCart } from "@/lib/cart-context";
 import { useToast } from "@/components/ui/ToastProvider";
+import { toggleNotifyRequest } from "@/lib/actions";
 import { formatEGP } from "@/lib/cart-totals";
 
 export type BadgeTone = "sale" | "bestseller" | "new";
@@ -45,7 +47,22 @@ export default function ProductCard({ product, className = "" }: ProductCardProp
   const outOfStock = stock === "out";
   const { addItem } = useCart();
   const { showToast } = useToast();
-  const t = useTranslations("productCard");
+  const t = useTranslations("product");
+  const tCard = useTranslations("productCard");
+  const [notifyPending, startNotifyTransition] = useTransition();
+
+  function handleNotifyClick(e: React.MouseEvent) {
+    // The card's own surface is a full-bleed link overlay (below) — without
+    // this, tapping the bell would navigate to the product page instead of
+    // toggling the request.
+    e.preventDefault();
+    e.stopPropagation();
+    startNotifyTransition(async () => {
+      const result = await toggleNotifyRequest(slug);
+      if (result === "unauthenticated") showToast(t("notifySignIn"));
+      else showToast(result === "added" ? t("notified") : t("notifyRemoved"));
+    });
+  }
 
   return (
     <div
@@ -80,7 +97,7 @@ export default function ProductCard({ product, className = "" }: ProductCardProp
       <div className="flex flex-1 flex-col gap-1.5 px-4 pb-4">
         <div className="flex flex-wrap gap-1.5">
           <span className={`w-fit rounded-full px-2 py-0.5 text-[11px] font-semibold ${stockToneClasses[stock]}`}>
-            {t(`stock.${stock}`)}
+            {tCard(`stock.${stock}`)}
           </span>
         </div>
 
@@ -99,12 +116,16 @@ export default function ProductCard({ product, className = "" }: ProductCardProp
           </div>
           <button
             type="button"
-            aria-label={outOfStock ? t("notifyMe", { name }) : t("addToCart", { name })}
-            disabled={outOfStock}
-            onClick={() => {
-              addItem({ slug, name, brand, price, stock });
-              showToast(t("addedToast", { name }));
-            }}
+            aria-label={outOfStock ? tCard("notifyMe", { name }) : tCard("addToCart", { name })}
+            disabled={outOfStock ? notifyPending : false}
+            onClick={
+              outOfStock
+                ? handleNotifyClick
+                : () => {
+                    addItem({ slug, name, brand, price, stock });
+                    showToast(tCard("addedToast", { name }));
+                  }
+            }
             className={`relative z-20 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white transition-[background-color,transform] duration-150 hover:scale-105 active:scale-90 disabled:cursor-not-allowed ${
               outOfStock ? "bg-neutral-400" : "bg-primary-500 hover:bg-primary-600"
             }`}

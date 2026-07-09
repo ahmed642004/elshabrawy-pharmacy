@@ -109,7 +109,13 @@ function LiveSearchDropdown({ open, loading, results, query, onClose, onSeeAll }
   );
 }
 
-export default function HeaderClient({ user }: { user: HeaderUser | null }) {
+export default function HeaderClient({
+  user,
+  deliveryCity,
+}: {
+  user: HeaderUser | null;
+  deliveryCity: string | null;
+}) {
   const router = useRouter();
   const t = useTranslations("header");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -229,7 +235,8 @@ export default function HeaderClient({ user }: { user: HeaderUser | null }) {
 
           <div className="ms-auto flex shrink-0 items-center gap-4">
             <span className="flex items-center gap-1.5 whitespace-nowrap text-[13px] text-neutral-500">
-              <MapPin className="h-4 w-4 text-secondary-500" /> {t("location")}
+              <MapPin className="h-4 w-4 text-secondary-500" />
+              {deliveryCity ? t("locationWithCity", { city: deliveryCity }) : t("location")}
             </span>
 
             <LocaleSwitcher />

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getHeaderDeliveryCity } from "@/lib/queries";
 import HeaderClient, { type HeaderUser } from "@/components/HeaderClient";
 
 export default async function Header() {
@@ -21,5 +22,8 @@ export default async function Header() {
       }
     : null;
 
-  return <HeaderClient user={headerUser} />;
+  // null for guests/no saved address — HeaderClient falls back to generic copy.
+  const deliveryCity = user ? await getHeaderDeliveryCity() : null;
+
+  return <HeaderClient user={headerUser} deliveryCity={deliveryCity} />;
 }

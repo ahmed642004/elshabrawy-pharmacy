@@ -7,7 +7,7 @@ import Button from "@/components/ui/Button";
 import { useCart } from "@/lib/cart-context";
 import { getCartTotals, formatEGP } from "@/lib/cart-totals";
 
-export default function OrderSummary() {
+export default function OrderSummary({ hasOutOfStock = false }: { hasOutOfStock?: boolean }) {
   const router = useRouter();
   const t = useTranslations("cart");
   const { items, promoInput, setPromoInput, promo, promoError, applyPromo } = useCart();
@@ -59,8 +59,15 @@ export default function OrderSummary() {
         <span className="font-headline text-2xl font-black text-neutral-900">{formatEGP(total)}</span>
       </div>
 
-      <div className="hidden flex-col gap-3 md:flex">
-        <Button variant="primary" size="lg" fullWidth onClick={() => router.push("/checkout")}>
+      <div className="hidden flex-col gap-2 md:flex">
+        {hasOutOfStock && <div className="text-xs text-danger-500">{t("removeOutOfStock")}</div>}
+        <Button
+          variant="primary"
+          size="lg"
+          fullWidth
+          disabled={hasOutOfStock}
+          onClick={() => router.push("/checkout")}
+        >
           {t("proceed")}
         </Button>
         <Link href="/" className="text-center text-[13.5px] font-semibold text-neutral-500">

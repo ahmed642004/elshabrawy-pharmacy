@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Product, BadgeTone, StockState } from "@/components/ProductCard";
 import type { Enums, Tables } from "@/lib/database.types";
@@ -131,12 +132,15 @@ export interface ProductDetail extends Product {
   reviews: { authorName: string; rating: number; body: string | null; createdAt: string }[];
 }
 
-export async function getProductBySlug(slug: string): Promise<ProductDetail | null> {
+// Wrapped in React cache() so generateMetadata() and the page body share one
+// Supabase fetch per request instead of hitting it twice.
+export const getProductBySlug = cache(async (slug: string): Promise<ProductDetail | null> => {
   const supabase = await createClient();
   const { data: row, error } = await supabase
     .from("products")
-    .select("*, categories(label), product_images(url, position), reviews(author_name, rating, body, created_at)")
+    .select("*, categories(label), product_images(url, position), reviews(id, author_name, rating, body, created_at)")
     .eq("slug", slug)
+    .eq("reviews.hidden", false)
     .maybeSingle();
   if (error) throw error;
   if (!row) return null;
@@ -165,6 +169,14 @@ export async function getProductBySlug(slug: string): Promise<ProductDetail | nu
       createdAt: r.created_at,
     })),
   };
+});
+
+// Lightweight slug list for the sitemap — no images/reviews/etc.
+export async function getAllProductSlugs(): Promise<{ slug: string; createdAt: string }[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("products").select("slug, created_at");
+  if (error || !data) return [];
+  return data.map((r) => ({ slug: r.slug, createdAt: r.created_at }));
 }
 
 // Whether a request has a signed-in user at all — no role/ownership info,
@@ -199,6 +211,74 @@ export async function getPendingReviews(): Promise<PendingReview[]> {
   const { data, error } = await supabase.rpc("get_pending_reviews");
   if (error || !data) return [];
   return data.map((row) => ({ slug: row.slug, name: row.name, imageUrl: row.image_url }));
+}
+
+export interface RestockedNotify {
+  id: string;
+  slug: string;
+  name: string;
+  imageUrl: string | null;
+}
+
+type NotifyRequestRow = {
+  id: string;
+  products: {
+    slug: string;
+    name: string;
+    stock: Enums<"stock_state">;
+    product_images: Pick<Tables<"product_images">, "url" | "position">[];
+  } | null;
+};
+
+// Signed-in user's pending notify requests whose product is back in stock.
+// KEY INSIGHT: no trigger/cron/transition-detection is needed. "Pending
+// request AND product currently not out-of-stock" IS the restock signal —
+// the 0010 trigger keeps products.stock derived from stock_count, so this
+// is always accurate at read time.
+// Fails closed to [] — this runs in the shop layout on every page view; an
+// error here must never take down the whole storefront (same contract as
+// getPendingReviews above).
+export async function getRestockedNotifies(): Promise<RestockedNotify[]> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("notify_requests")
+    .select("id, products(slug, name, stock, product_images(url, position))")
+    .is("notified_at", null)
+    .returns<NotifyRequestRow[]>();
+  if (error || !data) return [];
+
+  return data
+    .filter((r): r is NotifyRequestRow & { products: NonNullable<NotifyRequestRow["products"]> } =>
+      r.products != null && r.products.stock !== "out"
+    )
+    .map((r) => {
+      const images = [...r.products.product_images].sort((a, b) => a.position - b.position);
+      return { id: r.id, slug: r.products.slug, name: r.products.name, imageUrl: images[0]?.url ?? null };
+    });
+}
+
+export async function hasNotifyRequest(productSlug: string): Promise<boolean> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return false;
+
+  const { data: product } = await supabase.from("products").select("id").eq("slug", productSlug).maybeSingle();
+  if (!product) return false;
+
+  const { data } = await supabase
+    .from("notify_requests")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("product_id", product.id)
+    .maybeSingle();
+  return data != null;
 }
 
 export async function searchProducts(query: string): Promise<ListingProduct[]> {
@@ -238,11 +318,37 @@ export interface AddressRow {
   phone: string;
   address: string;
   city: string;
+  lat: number | null;
+  lng: number | null;
+  geoAccuracyM: number | null;
 }
 
 export interface AddressesResult {
   addresses: AddressRow[];
   isLoggedIn: boolean;
+}
+
+// Just the city text for the header's delivery chip — cheap, single-column,
+// single-row lookup so a signed-in header render never pulls full address
+// rows just to show "Delivery to X". Returns null for guests, no saved
+// addresses, or a blank city, so the caller can fall back to generic copy.
+export async function getHeaderDeliveryCity(): Promise<string | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data } = await supabase
+    .from("addresses")
+    .select("city")
+    .order("is_default", { ascending: false })
+    .order("created_at")
+    .limit(1)
+    .maybeSingle();
+
+  const city = data?.city?.trim();
+  return city || null;
 }
 
 // isLoggedIn is [] for guests (no session) — checkout falls back to the "add
@@ -272,6 +378,9 @@ export async function getAddresses(): Promise<AddressesResult> {
       phone: row.phone ?? "",
       address: row.street ?? "",
       city: [row.city, row.governorate].filter(Boolean).join(", "),
+      lat: row.lat,
+      lng: row.lng,
+      geoAccuracyM: row.geo_accuracy_m,
     })),
   };
 }
@@ -320,6 +429,7 @@ export interface AdminOrder {
   customerName: string;
   customerPhone: string;
   customerAddress: string;
+  geo: { lat: number; lng: number } | null;
   items: AdminOrderItem[];
 }
 
@@ -329,6 +439,8 @@ interface ShippingSnapshot {
   address?: string;
   city?: string;
   notes?: string;
+  lat?: number;
+  lng?: number;
 }
 
 const ORDER_SELECT_WITH_ITEMS = "*, order_items(product_slug, name, brand, price, qty)";
@@ -352,6 +464,13 @@ function toAdminOrder(row: OrderRowWithItems): AdminOrder {
     customerName: shipping.fullName ?? "",
     customerPhone: shipping.phone ?? "",
     customerAddress: [shipping.address, shipping.city].filter(Boolean).join(", "),
+    geo:
+      typeof shipping.lat === "number" &&
+      Number.isFinite(shipping.lat) &&
+      typeof shipping.lng === "number" &&
+      Number.isFinite(shipping.lng)
+        ? { lat: shipping.lat, lng: shipping.lng }
+        : null,
     items: (row.order_items ?? []).map((i) => ({
       slug: i.product_slug,
       name: i.name,
@@ -374,6 +493,69 @@ export async function getAdminOrders(): Promise<AdminOrder[]> {
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data.map(toAdminOrder);
+}
+
+export interface AdminPromoCode {
+  code: string;
+  discountEgp: number;
+  minSubtotal: number;
+  active: boolean;
+  expiresAt: string | null;
+  createdAt: string;
+}
+
+// RLS (promo_admin_all) scopes this to admins — a non-admin session simply
+// gets zero rows; app/admin/layout.tsx is still the primary gate for the page.
+// No usage/redemption counts here: orders only store the discount amount,
+// never which code produced it, so that data doesn't exist to query.
+export async function getAdminPromoCodes(): Promise<AdminPromoCode[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("promo_codes")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error || !data) return [];
+  return data.map((r) => ({
+    code: r.code,
+    discountEgp: Number(r.discount_egp),
+    minSubtotal: Number(r.min_subtotal),
+    active: r.active,
+    expiresAt: r.expires_at,
+    createdAt: r.created_at,
+  }));
+}
+
+export interface AdminReview {
+  id: string;
+  productSlug: string;
+  productName: string;
+  authorName: string;
+  rating: number;
+  body: string | null;
+  createdAt: string;
+  hidden: boolean;
+}
+
+// RLS's "Public read reviews" policy is `using (true)`, so this also sees
+// hidden rows — fine, this query only ever runs from /admin/reviews, gated
+// by the layout + assertAdmin() on the mutating actions.
+export async function getAdminReviews(): Promise<AdminReview[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("reviews")
+    .select("id, author_name, rating, body, created_at, hidden, products(slug, name)")
+    .order("created_at", { ascending: false });
+  if (error || !data) return [];
+  return data.map((r) => ({
+    id: r.id,
+    productSlug: r.products?.slug ?? "",
+    productName: r.products?.name ?? "Unknown product",
+    authorName: r.author_name,
+    rating: r.rating,
+    body: r.body,
+    createdAt: r.created_at,
+    hidden: r.hidden,
+  }));
 }
 
 export interface MyOrdersResult {
@@ -478,6 +660,9 @@ export interface AccountAddress {
   street: string;
   city: string;
   isDefault: boolean;
+  lat: number | null;
+  lng: number | null;
+  geoAccuracyM: number | null;
 }
 
 export interface AccountData {
@@ -502,7 +687,7 @@ export async function getAccountData(): Promise<AccountData> {
     supabase.from("profiles").select("full_name, phone").eq("id", user.id).maybeSingle(),
     supabase
       .from("addresses")
-      .select("id, recipient, phone, street, city, is_default")
+      .select("id, recipient, phone, street, city, is_default, lat, lng, geo_accuracy_m")
       .order("is_default", { ascending: false })
       .order("created_at"),
   ]);
@@ -520,6 +705,9 @@ export async function getAccountData(): Promise<AccountData> {
       street: row.street ?? "",
       city: row.city ?? "",
       isDefault: row.is_default,
+      lat: row.lat,
+      lng: row.lng,
+      geoAccuracyM: row.geo_accuracy_m,
     })),
   };
 }

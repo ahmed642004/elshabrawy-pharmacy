@@ -41,6 +41,9 @@ export default function CartPageClient() {
 
   const isEmpty = items.length === 0 && savedItems.length === 0;
   const { total } = getCartTotals(items, promo?.discount ?? 0);
+  // create_order() would reject an out-of-stock line server-side anyway —
+  // this just surfaces that up front instead of letting checkout fail.
+  const hasOutOfStock = items.some((i) => i.stock === "out");
 
   return (
     <main
@@ -103,22 +106,32 @@ export default function CartPageClient() {
           </div>
 
           <div className="md:sticky md:top-[96px]">
-            <OrderSummary />
+            <OrderSummary hasOutOfStock={hasOutOfStock} />
           </div>
         </div>
       )}
 
       {items.length > 0 && (
-        <div className="fixed right-0 bottom-0 left-0 z-[35] flex items-center gap-3 border-t border-neutral-200 bg-white px-4 py-3 shadow-[0_-4px_12px_rgba(15,23,42,0.08)] md:hidden">
-          <div className="min-w-0">
-            <div className="text-[11.5px] text-neutral-500">{t("total")}</div>
-            <div className="font-headline text-lg font-black whitespace-nowrap text-neutral-900">
-              {formatEGP(total)}
+        <div className="fixed right-0 bottom-0 left-0 z-[35] flex flex-col gap-1.5 border-t border-neutral-200 bg-white px-4 py-3 shadow-[0_-4px_12px_rgba(15,23,42,0.08)] md:hidden">
+          {hasOutOfStock && <div className="text-xs text-danger-500">{t("removeOutOfStock")}</div>}
+          <div className="flex items-center gap-3">
+            <div className="min-w-0">
+              <div className="text-[11.5px] text-neutral-500">{t("total")}</div>
+              <div className="font-headline text-lg font-black whitespace-nowrap text-neutral-900">
+                {formatEGP(total)}
+              </div>
             </div>
+            <Button
+              variant="primary"
+              size="lg"
+              fullWidth
+              className="flex-1"
+              disabled={hasOutOfStock}
+              onClick={() => router.push("/checkout")}
+            >
+              {t("proceed")}
+            </Button>
           </div>
-          <Button variant="primary" size="lg" fullWidth className="flex-1" onClick={() => router.push("/checkout")}>
-            {t("proceed")}
-          </Button>
         </div>
       )}
 

@@ -3,7 +3,7 @@
 import { Pill, Minus, Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCart, type CartItem } from "@/lib/cart-context";
-import { formatEGP } from "@/lib/cart-totals";
+import { formatEGP, MAX_ITEM_QTY } from "@/lib/cart-totals";
 
 interface CartItemRowProps {
   item: CartItem;
@@ -77,7 +77,8 @@ export default function CartItemRow({ item, onRemove }: CartItemRowProps) {
                   type="button"
                   aria-label={t("increaseQty", { name: item.name })}
                   onClick={() => updateQty(item.slug, item.qty + 1)}
-                  className="flex h-7 w-7 items-center justify-center rounded-[6px] text-neutral-700"
+                  disabled={item.qty >= MAX_ITEM_QTY}
+                  className="flex h-7 w-7 items-center justify-center rounded-[6px] text-neutral-700 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Plus className="h-[15px] w-[15px]" />
                 </button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { MapPin, X } from "lucide-react";
 import Button from "@/components/ui/Button";
 import IconButton from "@/components/ui/IconButton";
 import OrderStatusBadge from "@/components/admin/OrderStatusBadge";
@@ -60,6 +60,16 @@ export default function OrderDetailDrawer({ order, onClose, onAdvance, onCancel,
             <div className="font-label text-sm font-semibold text-neutral-900">{order.customerName || "—"}</div>
             <div className="mt-0.5 text-sm text-neutral-500">{order.customerPhone || "—"}</div>
             <div className="mt-0.5 text-sm text-neutral-500">{order.customerAddress || "—"}</div>
+            {order.geo && (
+              <a
+                href={`https://www.google.com/maps?q=${order.geo.lat},${order.geo.lng}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1.5 inline-flex items-center gap-1 font-label text-[12.5px] font-semibold text-primary-600 hover:text-primary-700"
+              >
+                <MapPin className="h-3.5 w-3.5" /> View on map
+              </a>
+            )}
           </div>
 
           <div>

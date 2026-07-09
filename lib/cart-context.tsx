@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { validatePromo } from "@/lib/actions";
-import { getCartTotals } from "@/lib/cart-totals";
+import { getCartTotals, MAX_ITEM_QTY } from "@/lib/cart-totals";
 import type { StockState } from "@/components/ProductCard";
 
 export interface CartItem {
@@ -43,12 +43,22 @@ interface CartContextValue {
 
 const CartContext = createContext<CartContextValue | null>(null);
 
+// Qty is clamped here — the single chokepoint every addition/merge passes
+// through — rather than only in the UI, since localStorage can already hold
+// pre-cap quantities (hand-edited, or saved before MAX_ITEM_QTY existed) and
+// the sign-in server merge sums two independently-valid carts.
 function mergeItemInto(list: CartItem[], item: CartItem): CartItem[] {
   const existing = list.find((i) => i.slug === item.slug);
   if (existing) {
-    return list.map((i) => (i.slug === item.slug ? { ...i, qty: i.qty + item.qty } : i));
+    return list.map((i) =>
+      i.slug === item.slug ? { ...i, qty: Math.min(i.qty + item.qty, MAX_ITEM_QTY) } : i
+    );
   }
-  return [...list, item];
+  return [...list, { ...item, qty: Math.min(item.qty, MAX_ITEM_QTY) }];
+}
+
+function clampCartItems(list: CartItem[]): CartItem[] {
+  return list.map((i) => (i.qty > MAX_ITEM_QTY ? { ...i, qty: MAX_ITEM_QTY } : i));
 }
 
 // Union of the server cart and the local cart at sign-in. On a slug conflict
@@ -94,9 +104,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       const stored = JSON.parse(raw) as StoredCart;
       // One-time hydration from localStorage, which isn't available during SSR.
+      // Clamped in case it predates MAX_ITEM_QTY or was hand-edited.
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setItems(stored.items ?? []);
-      setSavedItems(stored.savedItems ?? []);
+      setItems(clampCartItems(stored.items ?? []));
+      setSavedItems(clampCartItems(stored.savedItems ?? []));
       setPromo(stored.promo ?? null);
     } catch {
       // ignore malformed local storage content
@@ -115,7 +126,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      // Only (re)sync on events that actually change who's signed in.
+      // TOKEN_REFRESHED (and similar) fire periodically for a long-lived
+      // session and must not trigger a resync — the merge below reads
+      // localStorage, which lags behind in-flight React state until the
+      // debounced write-through catches up, so a resync here can silently
+      // clobber just-added items.
+      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "INITIAL_SESSION") return;
+
       const userId = session?.user?.id ?? null;
       if (!userId) {
         // Signed out: stop syncing but keep the local cart — it was this
@@ -153,10 +172,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
         }
 
         const local = stateRef.current;
-        const mergedItems = mergeCartLists(serverItems, local.items);
+        // clampCartItems here too: a slug present only server-side (no local
+        // conflict to clamp it via mergeItemInto) passes through mergeCartLists
+        // untouched, and could predate MAX_ITEM_QTY.
+        const mergedItems = clampCartItems(mergeCartLists(serverItems, local.items));
         const inCart = new Set(mergedItems.map((i) => i.slug));
         // A slug can't be both in the cart and saved for later; the cart wins.
-        const mergedSaved = mergeCartLists(serverSaved, local.savedItems).filter((i) => !inCart.has(i.slug));
+        const mergedSaved = clampCartItems(
+          mergeCartLists(serverSaved, local.savedItems).filter((i) => !inCart.has(i.slug))
+        );
 
         syncReadyRef.current = true;
         setItems(mergedItems);
@@ -202,7 +226,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         removeItem(slug);
         return;
       }
-      setItems((prev) => prev.map((i) => (i.slug === slug ? { ...i, qty } : i)));
+      const clamped = Math.min(qty, MAX_ITEM_QTY);
+      setItems((prev) => prev.map((i) => (i.slug === slug ? { ...i, qty: clamped } : i)));
     },
     [removeItem]
   );

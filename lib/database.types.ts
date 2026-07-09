@@ -18,9 +18,12 @@ export type Database = {
         Row: {
           city: string | null
           created_at: string
+          geo_accuracy_m: number | null
           governorate: string | null
           id: string
           is_default: boolean
+          lat: number | null
+          lng: number | null
           phone: string | null
           recipient: string | null
           street: string | null
@@ -29,9 +32,12 @@ export type Database = {
         Insert: {
           city?: string | null
           created_at?: string
+          geo_accuracy_m?: number | null
           governorate?: string | null
           id?: string
           is_default?: boolean
+          lat?: number | null
+          lng?: number | null
           phone?: string | null
           recipient?: string | null
           street?: string | null
@@ -40,9 +46,12 @@ export type Database = {
         Update: {
           city?: string | null
           created_at?: string
+          geo_accuracy_m?: number | null
           governorate?: string | null
           id?: string
           is_default?: boolean
+          lat?: number | null
+          lng?: number | null
           phone?: string | null
           recipient?: string | null
           street?: string | null
@@ -102,6 +111,38 @@ export type Database = {
           sort_order?: number
         }
         Relationships: []
+      }
+      notify_requests: {
+        Row: {
+          created_at: string
+          id: string
+          notified_at: string | null
+          product_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notified_at?: string | null
+          product_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notified_at?: string | null
+          product_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notify_requests_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       order_items: {
         Row: {
@@ -357,6 +398,7 @@ export type Database = {
           author_name: string
           body: string | null
           created_at: string
+          hidden: boolean
           id: string
           product_id: string
           rating: number
@@ -366,6 +408,7 @@ export type Database = {
           author_name: string
           body?: string | null
           created_at?: string
+          hidden?: boolean
           id?: string
           product_id: string
           rating: number
@@ -375,6 +418,7 @@ export type Database = {
           author_name?: string
           body?: string | null
           created_at?: string
+          hidden?: boolean
           id?: string
           product_id?: string
           rating?: number
@@ -418,13 +462,16 @@ export type Database = {
       get_pending_reviews: {
         Args: never
         Returns: {
-          slug: string
-          name: string
           image_url: string
+          name: string
+          slug: string
         }[]
       }
       has_purchased: { Args: { p_product_slug: string }; Returns: boolean }
-      has_purchased_product: { Args: { p_product_id: string }; Returns: boolean }
+      has_purchased_product: {
+        Args: { p_product_id: string }
+        Returns: boolean
+      }
       is_admin: { Args: never; Returns: boolean }
       replace_cart: { Args: { p_items: Json }; Returns: undefined }
       validate_promo: {

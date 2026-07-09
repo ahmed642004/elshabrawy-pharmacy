@@ -3,11 +3,25 @@
     "siteTitle": "Elshabrawy Pharmacy",
     "siteDescription": "Online pharmacy — cosmetics, vitamins, and supplements delivered fast."
   },
+  "notFound": {
+    "title": "Page not found",
+    "body": "The page you're looking for doesn't exist or may have moved.",
+    "home": "Go to homepage",
+    "productTitle": "Product not found",
+    "productBody": "This product may have been removed or the link is incorrect.",
+    "browse": "Browse products"
+  },
+  "errorPage": {
+    "title": "Something went wrong",
+    "body": "An unexpected error occurred. Please try again.",
+    "retry": "Try again"
+  },
   "header": {
     "searchPlaceholder": "Search medicines, brands, health needs…",
     "searchPlaceholderShort": "Search medicines, brands…",
     "menu": "Menu",
-    "location": "Cairo · Nasr City",
+    "location": "Delivery across Cairo",
+    "locationWithCity": "Delivery to {city}",
     "nav": {
       "skincare": "Skincare",
       "vitamins": "Vitamins & supplements",
@@ -40,18 +54,8 @@
     "vitamins": "Vitamins & supplements",
     "hair": "Hair care",
     "offers": "Offers",
-    "company": "Company",
-    "about": "About us",
-    "careers": "Careers",
-    "pharmacies": "Pharmacies near you",
     "support": "Support",
-    "help": "Help center",
     "track": "Track an order",
-    "ask": "Ask a pharmacist",
-    "legal": "Legal",
-    "privacy": "Privacy policy",
-    "terms": "Terms of service",
-    "licensing": "Licensing",
     "copyright": "© {year} Elshabrawy Pharmacy. Licensed pharmacy, EDA-registered."
   },
   "home": {
@@ -163,6 +167,7 @@
     "apply": "Apply",
     "total": "Total",
     "proceed": "Proceed to checkout",
+    "removeOutOfStock": "Remove out-of-stock items to continue",
     "continueShopping": "Continue shopping",
     "removedToast": "\"{name}\" removed",
     "undo": "Undo"
@@ -182,6 +187,15 @@
     "street": "Street address, building, apartment",
     "city": "City / area",
     "notes": "Delivery notes (optional)",
+    "geo": {
+      "useMyLocation": "Use my current location",
+      "clearLocation": "Clear location",
+      "locating": "Locating…",
+      "captured": "Location pinned (±{accuracy}m)",
+      "denied": "Location access was denied — you can still type the address.",
+      "unavailable": "Couldn't get your location. You can still type the address.",
+      "timeout": "Location request timed out. You can still type the address."
+    },
     "eta": "Estimated delivery: <strong>within 2 hours</strong> of order confirmation",
     "errors": {
       "fullName": "Full name is required",
@@ -229,12 +243,13 @@
     "reviewsShort": "({count, plural, one {# review} other {# reviews}})",
     "notifyAvailable": "Notify me when available",
     "notified": "We'll notify you",
+    "notifySignIn": "Sign in to get notified when it's back",
+    "notifyRemoved": "You won't be notified for this product",
     "decreaseQty": "Decrease quantity",
     "increaseQty": "Increase quantity",
     "addToCart": "Add to cart",
-    "wishlisted": "Wishlisted",
-    "addToWishlist": "Add to wishlist",
     "share": "Share",
+    "linkCopied": "Link copied",
     "deliveryInfo": "Delivery in 2 hours across Greater Cairo",
     "genuineInfo": "100% genuine, licensed pharmacy",
     "askInfo": "Ask a pharmacist — free chat, 24/7",
@@ -283,6 +298,10 @@
     "skip": "Skip",
     "close": "Close",
     "error": "Something went wrong. Please try again."
+  },
+  "restock": {
+    "title": "{count, plural, one {Good news — a product you wanted is back in stock:} other {Good news — # products you wanted are back in stock:}}",
+    "dismiss": "Dismiss"
   },
   "search": {
     "breadcrumb": "Search results",

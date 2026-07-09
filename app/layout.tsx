@@ -29,8 +29,13 @@ const cairo = Cairo({
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("common");
   return {
+    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
     title: t("siteTitle"),
     description: t("siteDescription"),
+    openGraph: {
+      siteName: t("siteTitle"),
+      type: "website",
+    },
   };
 }
 

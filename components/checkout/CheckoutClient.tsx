@@ -10,6 +10,7 @@ import { useCart } from "@/lib/cart-context";
 import { getCartTotals, formatEGP } from "@/lib/cart-totals";
 import { createOrder, saveAddress } from "@/lib/actions";
 import DeliveryStep, { type Address, type DeliveryForm } from "@/components/checkout/DeliveryStep";
+import type { GeoFix, ReverseGeocodeResult } from "@/lib/geolocation";
 import PaymentStep, { type PaymentMethodId, type CardDetails } from "@/components/checkout/PaymentStep";
 import ReviewStep from "@/components/checkout/ReviewStep";
 import CheckoutSummary from "@/components/checkout/CheckoutSummary";
@@ -26,7 +27,16 @@ export default function CheckoutClient({ addresses }: { addresses: Address[] }) 
 
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(addresses[0]?.id ?? null);
   const [addingNew, setAddingNew] = useState(addresses.length === 0);
-  const [form, setForm] = useState<DeliveryForm>({ fullName: "", phone: "", address: "", city: "", notes: "" });
+  const [form, setForm] = useState<DeliveryForm>({
+    fullName: "",
+    phone: "",
+    address: "",
+    city: "",
+    notes: "",
+    lat: null,
+    lng: null,
+    geoAccuracyM: null,
+  });
   const [touchedDelivery, setTouchedDelivery] = useState(false);
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>("cod");
@@ -79,6 +89,23 @@ export default function CheckoutClient({ addresses }: { addresses: Address[] }) 
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
+  // Prefill only empty fields — GPS coords are the ground truth for the
+  // driver, but never overwrite text the user already typed themselves.
+  function handleLocationCaptured(fix: GeoFix, geocoded: ReverseGeocodeResult | null) {
+    setForm((prev) => ({
+      ...prev,
+      lat: fix.lat,
+      lng: fix.lng,
+      geoAccuracyM: fix.accuracyM,
+      address: !prev.address.trim() && geocoded?.street ? geocoded.street : prev.address,
+      city: !prev.city.trim() && geocoded?.city ? geocoded.city : prev.city,
+    }));
+  }
+
+  function handleLocationCleared() {
+    setForm((prev) => ({ ...prev, lat: null, lng: null, geoAccuracyM: null }));
+  }
+
   function handleCardChange(field: keyof CardDetails, value: string) {
     setCard((prev) => ({ ...prev, [field]: value }));
   }
@@ -117,8 +144,23 @@ export default function CheckoutClient({ addresses }: { addresses: Address[] }) 
     setOrderError("");
 
     const shipping = addingNew || !selectedAddr
-      ? { fullName: form.fullName, phone: form.phone, address: form.address, city: form.city, notes: form.notes }
-      : { fullName: selectedAddr.name, phone: selectedAddr.phone, address: selectedAddr.address, city: selectedAddr.city };
+      ? {
+          fullName: form.fullName,
+          phone: form.phone,
+          address: form.address,
+          city: form.city,
+          notes: form.notes,
+          ...(form.lat != null && form.lng != null ? { lat: form.lat, lng: form.lng } : {}),
+        }
+      : {
+          fullName: selectedAddr.name,
+          phone: selectedAddr.phone,
+          address: selectedAddr.address,
+          city: selectedAddr.city,
+          ...(selectedAddr.lat != null && selectedAddr.lng != null
+            ? { lat: selectedAddr.lat, lng: selectedAddr.lng }
+            : {}),
+        };
 
     try {
       const [num] = await Promise.all([
@@ -140,6 +182,9 @@ export default function CheckoutClient({ addresses }: { addresses: Address[] }) 
           phone: form.phone,
           street: form.address,
           city: form.city,
+          lat: form.lat,
+          lng: form.lng,
+          geoAccuracyM: form.geoAccuracyM,
         }).catch(() => {
           // Best-effort: the order already succeeded, so a failure to save
           // the address for next time shouldn't surface as an order error.
@@ -300,6 +345,8 @@ export default function CheckoutClient({ addresses }: { addresses: Address[] }) 
                 onSelectAddress={handleSelectAddress}
                 onSelectAddNew={handleSelectAddNew}
                 onFormChange={handleFormChange}
+                onLocationCaptured={handleLocationCaptured}
+                onLocationCleared={handleLocationCleared}
               />
             )}
             {currentKey === "payment" && (

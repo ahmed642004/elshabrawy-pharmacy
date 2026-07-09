@@ -97,7 +97,35 @@ export async function getReorderItems(slugs: string[]): Promise<ReorderItem[]> {
   });
 }
 
-interface SaveAddressInput {
+interface GeoInput {
+  lat?: number | null;
+  lng?: number | null;
+  geoAccuracyM?: number | null;
+}
+
+// Bad/malformed coords must never fail an address save — they just don't get
+// stored. Both lat and lng are required together (a lone coordinate is
+// meaningless); geoAccuracyM rides along only when both are valid.
+function sanitizeGeo(input: GeoInput): { lat: number | null; lng: number | null; geo_accuracy_m: number | null } {
+  const { lat, lng, geoAccuracyM } = input;
+  const valid =
+    typeof lat === "number" &&
+    Number.isFinite(lat) &&
+    lat >= -90 &&
+    lat <= 90 &&
+    typeof lng === "number" &&
+    Number.isFinite(lng) &&
+    lng >= -180 &&
+    lng <= 180;
+  if (!valid) return { lat: null, lng: null, geo_accuracy_m: null };
+  return {
+    lat,
+    lng,
+    geo_accuracy_m: typeof geoAccuracyM === "number" && Number.isFinite(geoAccuracyM) ? geoAccuracyM : null,
+  };
+}
+
+interface SaveAddressInput extends GeoInput {
   recipient: string;
   phone: string;
   street: string;
@@ -126,6 +154,7 @@ export async function saveAddress(input: SaveAddressInput): Promise<void> {
     street: input.street,
     city: input.city,
     is_default: (count ?? 0) === 0,
+    ...sanitizeGeo(input),
   });
   if (error) throw error;
 }
@@ -163,7 +192,7 @@ export async function updateProfile(input: { fullName: string; phone: string }):
   revalidatePath("/account");
 }
 
-interface AddressInput {
+interface AddressInput extends GeoInput {
   recipient: string;
   phone: string;
   street: string;
@@ -179,7 +208,13 @@ export async function updateAddress(id: string, input: AddressInput): Promise<vo
 
   const { error } = await supabase
     .from("addresses")
-    .update({ recipient: input.recipient, phone: input.phone, street: input.street, city: input.city })
+    .update({
+      recipient: input.recipient,
+      phone: input.phone,
+      street: input.street,
+      city: input.city,
+      ...sanitizeGeo(input),
+    })
     .eq("id", id)
     .eq("user_id", user.id);
   if (error) throw error;
@@ -274,6 +309,108 @@ export async function adjustProductStock(productId: string, delta: number): Prom
 
   revalidatePath("/admin");
   revalidatePath("/admin/inventory");
+}
+
+interface PromoInput {
+  discountEgp: number;
+  minSubtotal: number;
+  expiresAt: string | null;
+}
+
+function assertPromoAmounts(input: PromoInput): void {
+  if (!Number.isFinite(input.discountEgp) || input.discountEgp <= 0) throw new Error("INVALID_AMOUNT");
+  if (!Number.isFinite(input.minSubtotal) || input.minSubtotal < 0) throw new Error("INVALID_MIN");
+}
+
+export async function createPromoCode(input: PromoInput & { code: string }): Promise<void> {
+  await assertAdmin();
+  // The DB check (code = upper(code)) rejects lowercase outright, so this
+  // normalization isn't optional — without it, a lowercase-typed code fails
+  // to insert with a raw constraint error instead of a clean one.
+  const code = input.code.trim().toUpperCase();
+  if (!/^[A-Z0-9]{3,24}$/.test(code)) throw new Error("INVALID_CODE");
+  assertPromoAmounts(input);
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("promo_codes").insert({
+    code,
+    discount_egp: input.discountEgp,
+    min_subtotal: input.minSubtotal,
+    expires_at: input.expiresAt,
+  });
+  if (error) {
+    // 23505 = duplicate PK. Raw PostgrestErrors are redacted crossing the
+    // server-action boundary, so map to a short code the client can match on.
+    throw new Error(error.code === "23505" ? "CODE_EXISTS" : "PROMO_SAVE_FAILED");
+  }
+
+  revalidatePath("/admin/promos");
+}
+
+// Code is the PK and immutable once created (same convention as products.slug)
+// — the UI never sends it for update, so renaming isn't possible this way.
+export async function updatePromoCode(code: string, input: PromoInput): Promise<void> {
+  await assertAdmin();
+  assertPromoAmounts(input);
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("promo_codes")
+    .update({
+      discount_egp: input.discountEgp,
+      min_subtotal: input.minSubtotal,
+      expires_at: input.expiresAt,
+    })
+    .eq("code", code);
+  if (error) throw new Error("PROMO_SAVE_FAILED");
+
+  revalidatePath("/admin/promos");
+}
+
+export async function togglePromoActive(code: string, active: boolean): Promise<void> {
+  await assertAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase.from("promo_codes").update({ active }).eq("code", code);
+  if (error) throw new Error("PROMO_SAVE_FAILED");
+
+  revalidatePath("/admin/promos");
+}
+
+// Safe even for a code that discounted past orders: orders store only the
+// discount amount they got, never a reference to the code itself.
+export async function deletePromoCode(code: string): Promise<void> {
+  await assertAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase.from("promo_codes").delete().eq("code", code);
+  if (error) throw new Error("PROMO_SAVE_FAILED");
+
+  revalidatePath("/admin/promos");
+}
+
+export async function hideReview(reviewId: string, hidden: boolean): Promise<void> {
+  await assertAdmin();
+  const supabase = await createClient();
+  const { data: row, error } = await supabase
+    .from("reviews")
+    .update({ hidden })
+    .eq("id", reviewId)
+    .select("products(slug)")
+    .maybeSingle();
+  if (error) throw new Error("REVIEW_MODERATE_FAILED");
+
+  revalidatePath("/admin/reviews");
+  if (row?.products?.slug) revalidatePath(`/product/${row.products.slug}`);
+}
+
+export async function deleteReviewAdmin(reviewId: string): Promise<void> {
+  await assertAdmin();
+  const supabase = await createClient();
+  const { data: row } = await supabase.from("reviews").select("products(slug)").eq("id", reviewId).maybeSingle();
+  const { error } = await supabase.from("reviews").delete().eq("id", reviewId);
+  if (error) throw new Error("REVIEW_MODERATE_FAILED");
+
+  revalidatePath("/admin/reviews");
+  if (row?.products?.slug) revalidatePath(`/product/${row.products.slug}`);
 }
 
 function slugify(name: string): string {
@@ -616,4 +753,60 @@ export async function submitReview(input: SubmitReviewInput): Promise<void> {
   if (error) throw error;
 
   revalidatePath(`/product/${input.productSlug}`);
+}
+
+export type NotifyToggleResult = "added" | "removed" | "unauthenticated";
+
+// Toggles a back-in-stock request for the signed-in user. Returns a result
+// instead of throwing for the signed-out case — "sign in to get notified" is
+// an expected state the caller reacts to, not a failure, and thrown action
+// errors get redacted to a generic message crossing the client boundary.
+export async function toggleNotifyRequest(productSlug: string): Promise<NotifyToggleResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return "unauthenticated";
+
+  const { data: product } = await supabase.from("products").select("id").eq("slug", productSlug).maybeSingle();
+  if (!product) return "removed"; // product vanished; nothing to toggle
+
+  const { data: existing } = await supabase
+    .from("notify_requests")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("product_id", product.id)
+    .maybeSingle();
+
+  if (existing) {
+    await supabase.from("notify_requests").delete().eq("id", existing.id);
+    revalidatePath(`/product/${productSlug}`);
+    return "removed";
+  }
+
+  // Upsert on the unique pair absorbs double-clicks (23505). Resetting
+  // notified_at to null lets a user re-request after a dismissed notice.
+  await supabase
+    .from("notify_requests")
+    .upsert({ user_id: user.id, product_id: product.id, notified_at: null }, { onConflict: "user_id,product_id" });
+  revalidatePath(`/product/${productSlug}`);
+  return "added";
+}
+
+// Marks restock notices as seen so the banner (RestockBanner.tsx) doesn't
+// reappear. RLS scopes the update to the caller's own rows regardless; the
+// explicit eq is belt-and-braces.
+export async function dismissRestockNotice(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase
+    .from("notify_requests")
+    .update({ notified_at: new Date().toISOString() })
+    .in("id", ids.slice(0, 100))
+    .eq("user_id", user.id);
 }

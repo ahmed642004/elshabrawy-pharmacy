@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { Star, Minus, Plus, ShoppingCart, Bell, Heart, Share2, Truck, ShieldCheck, Headset } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Star, Minus, Plus, ShoppingCart, Bell, Share2, Truck, ShieldCheck, Headset } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import type { StockState } from "@/components/ProductCard";
 import { useCart } from "@/lib/cart-context";
 import { useToast } from "@/components/ui/ToastProvider";
-import { formatEGP } from "@/lib/cart-totals";
+import { toggleNotifyRequest } from "@/lib/actions";
+import { formatEGP, MAX_ITEM_QTY } from "@/lib/cart-totals";
 
 interface ProductPurchasePanelProps {
   slug: string;
@@ -18,6 +19,7 @@ interface ProductPurchasePanelProps {
   stock: StockState;
   rating: number | null;
   reviewCount: number;
+  notifyRequested: boolean;
 }
 
 const stockToneClasses: Record<StockState, string> = {
@@ -35,16 +37,47 @@ export default function ProductPurchasePanel({
   stock,
   rating,
   reviewCount,
+  notifyRequested,
 }: ProductPurchasePanelProps) {
   const t = useTranslations("product");
   const tCard = useTranslations("productCard");
   const [qty, setQty] = useState(1);
-  const [wishlisted, setWishlisted] = useState(false);
-  const [notified, setNotified] = useState(false);
+  const [notified, setNotified] = useState(notifyRequested);
+  const [notifyPending, startNotifyTransition] = useTransition();
   const outOfStock = stock === "out";
   const discountPct = wasPrice ? Math.round((1 - price / wasPrice) * 100) : 0;
   const { addItem } = useCart();
   const { showToast } = useToast();
+
+  function handleNotifyToggle() {
+    startNotifyTransition(async () => {
+      const result = await toggleNotifyRequest(slug);
+      if (result === "unauthenticated") {
+        showToast(t("notifySignIn"));
+        return;
+      }
+      setNotified(result === "added");
+      if (result === "removed") showToast(t("notifyRemoved"));
+    });
+  }
+
+  async function handleShare() {
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: name, url });
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+        showToast(t("linkCopied"));
+      }
+    } catch (err) {
+      // The user dismissing the native share sheet throws AbortError — not a
+      // real failure, so it stays silent rather than surfacing a toast.
+      if ((err as Error).name !== "AbortError") {
+        /* no-op */
+      }
+    }
+  }
 
   return (
     <div className="flex min-w-0 flex-col gap-3.5">
@@ -83,7 +116,13 @@ export default function ProductPurchasePanel({
 
       <div className="flex flex-wrap items-center gap-3">
         {outOfStock ? (
-          <Button variant="outlined" size="lg" className="min-w-[220px] flex-1" onClick={() => setNotified(true)}>
+          <Button
+            variant="outlined"
+            size="lg"
+            className="min-w-[220px] flex-1"
+            disabled={notifyPending}
+            onClick={handleNotifyToggle}
+          >
             <Bell className="h-[18px] w-[18px]" /> {notified ? t("notified") : t("notifyAvailable")}
           </Button>
         ) : (
@@ -103,8 +142,9 @@ export default function ProductPurchasePanel({
               <button
                 type="button"
                 aria-label={t("increaseQty")}
-                onClick={() => setQty((q) => q + 1)}
-                className="flex h-9 w-9 items-center justify-center text-neutral-700"
+                onClick={() => setQty((q) => Math.min(MAX_ITEM_QTY, q + 1))}
+                disabled={qty >= MAX_ITEM_QTY}
+                className="flex h-9 w-9 items-center justify-center text-neutral-700 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <Plus className="h-4 w-4" />
               </button>
@@ -127,17 +167,9 @@ export default function ProductPurchasePanel({
       <div className="flex items-center gap-4">
         <button
           type="button"
-          onClick={() => setWishlisted((v) => !v)}
-          className={`flex items-center gap-1.5 text-[13.5px] font-semibold transition-colors ${
-            wishlisted ? "text-danger-500" : "text-neutral-500"
-          }`}
+          onClick={handleShare}
+          className="flex items-center gap-1.5 text-[13.5px] font-semibold text-neutral-500"
         >
-          <span key={String(wishlisted)} style={{ animation: "ccBadgePop 300ms ease-out" }}>
-            <Heart className={`h-[18px] w-[18px] ${wishlisted ? "fill-current" : ""}`} />
-          </span>
-          {wishlisted ? t("wishlisted") : t("addToWishlist")}
-        </button>
-        <button type="button" className="flex items-center gap-1.5 text-[13.5px] font-semibold text-neutral-500">
           <Share2 className="h-[18px] w-[18px]" /> {t("share")}
         </button>
       </div>
