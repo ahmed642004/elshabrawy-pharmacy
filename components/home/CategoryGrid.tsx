@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { categoryLabel, getCategoryVisual, type CategoryTone } from "@/lib/categories";
 import { getCategories } from "@/lib/queries";
+import Image from "next/image";
 
 const toneClasses: Record<CategoryTone, { bg: string; fg: string }> = {
   lead: { bg: "bg-primary-50", fg: "text-primary-600" },
@@ -43,9 +44,10 @@ export default async function CategoryGrid() {
             >
               {category.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Image
                   src={category.imageUrl}
                   alt=""
+                  fill
                   className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                 />
               ) : (
