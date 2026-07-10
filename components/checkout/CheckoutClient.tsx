@@ -11,7 +11,7 @@ import { getCartTotals, formatEGP } from "@/lib/cart-totals";
 import { createOrder, saveAddress } from "@/lib/actions";
 import DeliveryStep, { type Address, type DeliveryForm } from "@/components/checkout/DeliveryStep";
 import type { GeoFix, ReverseGeocodeResult } from "@/lib/geolocation";
-import PaymentStep, { type PaymentMethodId, type CardDetails } from "@/components/checkout/PaymentStep";
+import PaymentStep from "@/components/checkout/PaymentStep";
 import ReviewStep from "@/components/checkout/ReviewStep";
 import CheckoutSummary from "@/components/checkout/CheckoutSummary";
 
@@ -39,10 +39,6 @@ export default function CheckoutClient({ addresses }: { addresses: Address[] }) 
   });
   const [touchedDelivery, setTouchedDelivery] = useState(false);
 
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>("cod");
-  const [card, setCard] = useState<CardDetails>({ number: "", expiry: "", cvv: "", name: "" });
-  const [touchedPayment, setTouchedPayment] = useState(false);
-
   const [placingOrder, setPlacingOrder] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderNumber, setOrderNumber] = useState("");
@@ -59,18 +55,7 @@ export default function CheckoutClient({ addresses }: { addresses: Address[] }) 
     return errors;
   }
 
-  function validatePayment(): Partial<Record<keyof CardDetails, string>> {
-    const errors: Partial<Record<keyof CardDetails, string>> = {};
-    if (paymentMethod === "card") {
-      if (!card.number.trim()) errors.number = t("errors.cardNumber");
-      if (!card.expiry.trim()) errors.expiry = t("errors.expiry");
-      if (!card.cvv.trim()) errors.cvv = t("errors.cvv");
-    }
-    return errors;
-  }
-
   const deliveryErrors = touchedDelivery ? validateDelivery() : {};
-  const paymentErrors = touchedPayment ? validatePayment() : {};
 
   const currentKey = STEPS[stepIndex].key;
   const isReviewStep = currentKey === "review";
@@ -106,10 +91,6 @@ export default function CheckoutClient({ addresses }: { addresses: Address[] }) 
     setForm((prev) => ({ ...prev, lat: null, lng: null, geoAccuracyM: null }));
   }
 
-  function handleCardChange(field: keyof CardDetails, value: string) {
-    setCard((prev) => ({ ...prev, [field]: value }));
-  }
-
   function nextStep() {
     if (currentKey === "delivery") {
       const errors = validateDelivery();
@@ -118,16 +99,8 @@ export default function CheckoutClient({ addresses }: { addresses: Address[] }) 
         return;
       }
     }
-    if (currentKey === "payment") {
-      const errors = validatePayment();
-      if (Object.keys(errors).length) {
-        setTouchedPayment(true);
-        return;
-      }
-    }
     setStepIndex((i) => Math.min(STEPS.length - 1, i + 1));
     setTouchedDelivery(false);
-    setTouchedPayment(false);
   }
 
   function prevStep() {
@@ -166,7 +139,7 @@ export default function CheckoutClient({ addresses }: { addresses: Address[] }) 
       const [result] = await Promise.all([
         createOrder({
           items: items.map((i) => ({ slug: i.slug, qty: i.qty })),
-          paymentMethod,
+          paymentMethod: "cod",
           shipping,
           promoCode: promo?.code ?? null,
         }),
@@ -222,7 +195,7 @@ export default function CheckoutClient({ addresses }: { addresses: Address[] }) 
     : selectedAddr
       ? `${selectedAddr.address}, ${selectedAddr.city}`
       : "—";
-  const recapPayment = t(`methods.${paymentMethod}`);
+  const recapPayment = t("methods.cod");
 
   const { total } = getCartTotals(items, promo?.discount ?? 0);
 
@@ -364,15 +337,7 @@ export default function CheckoutClient({ addresses }: { addresses: Address[] }) 
                 onLocationCleared={handleLocationCleared}
               />
             )}
-            {currentKey === "payment" && (
-              <PaymentStep
-                paymentMethod={paymentMethod}
-                onSelectPaymentMethod={setPaymentMethod}
-                card={card}
-                errors={paymentErrors}
-                onCardChange={handleCardChange}
-              />
-            )}
+            {currentKey === "payment" && <PaymentStep />}
             {isReviewStep && <ReviewStep recapAddress={recapAddress} recapPayment={recapPayment} />}
             {isReviewStep && orderError && (
               <div className="rounded-[10px] border border-danger-50 bg-danger-50 px-3.5 py-3 text-[13px] text-danger-600">

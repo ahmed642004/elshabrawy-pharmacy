@@ -228,22 +228,15 @@
       "phone": "Phone number is required",
       "address": "Address is required",
       "city": "City / area is required",
-      "cardNumber": "Card number is required",
-      "expiry": "Expiry is required",
-      "cvv": "CVV is required",
       "outOfStock": "Some items in your cart are no longer in stock. Please review your cart.",
       "insufficientStock": "Only {available, plural, =0 {none} one {# left} other {# left}} of {name}, but you're ordering {requested}. Please adjust the quantity in your cart."
     },
     "paymentTitle": "Payment method",
     "methods": {
-      "cod": "Cash on delivery",
-      "card": "Credit / debit card",
-      "wallet": "Mobile wallet"
+      "cod": "Cash on delivery"
     },
-    "cardNumber": "Card number",
-    "expiry": "MM / YY",
-    "cvv": "CVV",
-    "nameOnCard": "Name on card",
+    "codHint": "Pay in cash when your order arrives at your door.",
+    "onlinePaymentSoon": "Online card and wallet payment is coming soon.",
     "promoApplied": "Promo code {code} applied",
     "reviewTitle": "Review & place order",
     "qty": "Qty {qty}",

@@ -1,42 +1,16 @@
 "use client";
 
-import { Banknote, CreditCard, Wallet, BadgeCheck } from "lucide-react";
+import { Banknote, BadgeCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { useCart } from "@/lib/cart-context";
 
-export type PaymentMethodId = "cod" | "card" | "wallet";
-
-export interface CardDetails {
-  number: string;
-  expiry: string;
-  cvv: string;
-  name: string;
-}
-
-// Labels come from the checkout.methods.* messages, keyed by id.
-export const PAYMENT_METHODS: { id: PaymentMethodId; icon: typeof Banknote }[] = [
-  { id: "cod", icon: Banknote },
-  { id: "card", icon: CreditCard },
-  { id: "wallet", icon: Wallet },
-];
-
-interface PaymentStepProps {
-  paymentMethod: PaymentMethodId;
-  onSelectPaymentMethod: (id: PaymentMethodId) => void;
-  card: CardDetails;
-  errors: Partial<Record<keyof CardDetails, string>>;
-  onCardChange: (field: keyof CardDetails, value: string) => void;
-}
-
-export default function PaymentStep({
-  paymentMethod,
-  onSelectPaymentMethod,
-  card,
-  errors,
-  onCardChange,
-}: PaymentStepProps) {
+// Cash on delivery is the only live payment method — card / mobile-wallet
+// options come back once a real gateway (Paymob) is integrated. The DB
+// payment_method enum still carries 'card' | 'wallet' for historical orders,
+// so only the checkout UI narrows to COD, not the types in lib/.
+export default function PaymentStep() {
   const t = useTranslations("checkout");
   const tCart = useTranslations("cart");
   const { promoInput, setPromoInput, promo, promoError, applyPromo } = useCart();
@@ -45,49 +19,17 @@ export default function PaymentStep({
     <div className="flex flex-col gap-4">
       <h2 className="m-0 font-headline text-xl font-extrabold text-neutral-900">{t("paymentTitle")}</h2>
 
-      <div className="grid grid-cols-3 gap-3">
-        {PAYMENT_METHODS.map((pm) => {
-          const selected = paymentMethod === pm.id;
-          const Icon = pm.icon;
-          return (
-            <button
-              key={pm.id}
-              type="button"
-              onClick={() => onSelectPaymentMethod(pm.id)}
-              className={`flex flex-col items-center gap-2 rounded-[14px] border px-3 py-4.5 ${
-                selected ? "border-2 border-primary-500 bg-primary-50" : "border-neutral-300 bg-white"
-              }`}
-            >
-              <Icon className={`h-[22px] w-[22px] ${selected ? "text-primary-500" : "text-neutral-500"}`} />
-              <span className="font-label text-[13.5px] font-semibold text-neutral-900">{t(`methods.${pm.id}`)}</span>
-            </button>
-          );
-        })}
+      <div className="flex items-start gap-3.5 rounded-[14px] border-2 border-primary-500 bg-primary-50 px-4 py-4">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white">
+          <Banknote className="h-[22px] w-[22px] text-primary-500" />
+        </span>
+        <div>
+          <div className="font-label text-[14.5px] font-bold text-neutral-900">{t("methods.cod")}</div>
+          <div className="mt-1 text-[13px] leading-[1.6] text-neutral-600">{t("codHint")}</div>
+        </div>
       </div>
 
-      {paymentMethod === "card" && (
-        <div className="flex flex-col gap-3.5 rounded-[14px] border border-neutral-200 bg-white p-4.5">
-          <div>
-            <Input
-              placeholder={t("cardNumber")}
-              value={card.number}
-              onChange={(e) => onCardChange("number", e.target.value)}
-            />
-            {errors.number && <div className="mt-1 text-xs text-danger-500">{errors.number}</div>}
-          </div>
-          <div className="grid grid-cols-2 gap-3.5">
-            <div>
-              <Input placeholder={t("expiry")} value={card.expiry} onChange={(e) => onCardChange("expiry", e.target.value)} />
-              {errors.expiry && <div className="mt-1 text-xs text-danger-500">{errors.expiry}</div>}
-            </div>
-            <div>
-              <Input placeholder={t("cvv")} value={card.cvv} onChange={(e) => onCardChange("cvv", e.target.value)} />
-              {errors.cvv && <div className="mt-1 text-xs text-danger-500">{errors.cvv}</div>}
-            </div>
-          </div>
-          <Input placeholder={t("nameOnCard")} value={card.name} onChange={(e) => onCardChange("name", e.target.value)} />
-        </div>
-      )}
+      <div className="text-[12.5px] text-neutral-400">{t("onlinePaymentSoon")}</div>
 
       {promo ? (
         <div className="flex items-center gap-2 text-[13.5px] font-semibold text-secondary-600">
