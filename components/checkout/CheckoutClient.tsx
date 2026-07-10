@@ -10,7 +10,7 @@ import { useCart } from "@/lib/cart-context";
 import { getCartTotals, formatEGP } from "@/lib/cart-totals";
 import { createOrder, saveAddress } from "@/lib/actions";
 import DeliveryStep, { type Address, type DeliveryForm } from "@/components/checkout/DeliveryStep";
-import type { GeoFix, ReverseGeocodeResult } from "@/lib/geolocation";
+import { isWithinDeliveryArea, type GeoFix, type ReverseGeocodeResult } from "@/lib/geolocation";
 import PaymentStep from "@/components/checkout/PaymentStep";
 import ReviewStep from "@/components/checkout/ReviewStep";
 import CheckoutSummary from "@/components/checkout/CheckoutSummary";
@@ -38,6 +38,10 @@ export default function CheckoutClient({ addresses }: { addresses: Address[] }) 
     geoAccuracyM: null,
   });
   const [touchedDelivery, setTouchedDelivery] = useState(false);
+  // Result of the Cairo/Giza check on the last captured location. null = not
+  // checked or indeterminate (fails open); false = confirmed outside the
+  // delivery area, which blocks advancing past the delivery step.
+  const [deliveryAreaOk, setDeliveryAreaOk] = useState<boolean | null>(null);
 
   const [placingOrder, setPlacingOrder] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
@@ -85,10 +89,14 @@ export default function CheckoutClient({ addresses }: { addresses: Address[] }) 
       address: !prev.address.trim() && geocoded?.street ? geocoded.street : prev.address,
       city: !prev.city.trim() && geocoded?.city ? geocoded.city : prev.city,
     }));
+    // We only deliver within Cairo & Giza — reject a pinned location that
+    // reverse-geocodes to any other governorate (indeterminate lookups pass).
+    setDeliveryAreaOk(isWithinDeliveryArea(geocoded));
   }
 
   function handleLocationCleared() {
     setForm((prev) => ({ ...prev, lat: null, lng: null, geoAccuracyM: null }));
+    setDeliveryAreaOk(null);
   }
 
   function nextStep() {
@@ -98,6 +106,9 @@ export default function CheckoutClient({ addresses }: { addresses: Address[] }) 
         setTouchedDelivery(true);
         return;
       }
+      // A pinned location outside Cairo/Giza can't proceed; the notice in
+      // DeliveryStep explains and offers WhatsApp.
+      if (deliveryAreaOk === false) return;
     }
     setStepIndex((i) => Math.min(STEPS.length - 1, i + 1));
     setTouchedDelivery(false);
@@ -335,6 +346,7 @@ export default function CheckoutClient({ addresses }: { addresses: Address[] }) 
                 onFormChange={handleFormChange}
                 onLocationCaptured={handleLocationCaptured}
                 onLocationCleared={handleLocationCleared}
+                outsideArea={deliveryAreaOk === false}
               />
             )}
             {currentKey === "payment" && <PaymentStep />}

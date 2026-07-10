@@ -2,6 +2,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ReviewPrompt from "@/components/product/ReviewPrompt";
 import RestockBanner from "@/components/RestockBanner";
+import WhatsAppButton from "@/components/WhatsAppButton";
 import { getPendingReviews, getRestockedNotifies } from "@/lib/queries";
 
 export default async function ShopLayout({ children }: { children: React.ReactNode }) {
@@ -15,6 +16,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
       <RestockBanner items={restocked} />
       {children}
       <Footer />
+      <WhatsAppButton />
       <ReviewPrompt products={pendingReviews} />
     </>
   );

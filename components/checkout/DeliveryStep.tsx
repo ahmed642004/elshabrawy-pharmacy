@@ -1,9 +1,10 @@
 "use client";
 
-import { PlusCircle, Truck } from "lucide-react";
+import { PlusCircle, Truck, MessageCircle, AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Input from "@/components/ui/Input";
 import UseLocationButton from "@/components/checkout/UseLocationButton";
+import { whatsappLink } from "@/lib/contact";
 import type { GeoFix, ReverseGeocodeResult } from "@/lib/geolocation";
 
 export interface Address {
@@ -40,6 +41,7 @@ interface DeliveryStepProps {
   onFormChange: (field: keyof DeliveryForm, value: string) => void;
   onLocationCaptured: (fix: GeoFix, geocoded: ReverseGeocodeResult | null) => void;
   onLocationCleared: () => void;
+  outsideArea: boolean;
 }
 
 export default function DeliveryStep({
@@ -53,6 +55,7 @@ export default function DeliveryStep({
   onFormChange,
   onLocationCaptured,
   onLocationCleared,
+  outsideArea,
 }: DeliveryStepProps) {
   const t = useTranslations("checkout");
   const showEta = (!!selectedAddressId && !addingNew) || (addingNew && form.city.trim().length > 0);
@@ -109,6 +112,22 @@ export default function DeliveryStep({
             onCaptured={onLocationCaptured}
             onCleared={onLocationCleared}
           />
+          {outsideArea && (
+            <div className="flex flex-col gap-2 rounded-[10px] border border-danger-100 bg-danger-50 px-3.5 py-3 text-[13px] leading-relaxed text-danger-600">
+              <span className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{t("outsideDeliveryArea")}</span>
+              </span>
+              <a
+                href={whatsappLink(t("whatsappPrefill"))}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex w-fit items-center gap-1.5 font-semibold text-secondary-700 no-underline"
+              >
+                <MessageCircle className="h-4 w-4" /> {t("contactWhatsApp")}
+              </a>
+            </div>
+          )}
           <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
             <div>
               <Input

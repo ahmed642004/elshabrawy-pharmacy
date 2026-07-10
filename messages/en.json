@@ -1,7 +1,9 @@
 {
   "common": {
     "siteTitle": "Elshabrawy Pharmacy",
-    "siteDescription": "Online pharmacy — cosmetics, vitamins, and supplements delivered fast."
+    "siteDescription": "Online pharmacy — cosmetics, vitamins, and supplements delivered fast.",
+    "whatsappPrefill": "Hi Elshabrawy Pharmacy, I have a question.",
+    "whatsappAria": "Chat with us on WhatsApp"
   },
   "notFound": {
     "title": "Page not found",
@@ -58,6 +60,8 @@
     "track": "Track an order",
     "about": "About us",
     "contact": "Contact us",
+    "contactTitle": "Contact",
+    "whatsapp": "Chat on WhatsApp",
     "copyright": "© {year} Elshabrawy Pharmacy. Licensed pharmacy, EDA-registered."
   },
   "about": {
@@ -75,6 +79,11 @@
     "title": "Contact us",
     "metaDescription": "Get in touch with Elshabrawy Pharmacy — order questions, product advice, and support from licensed pharmacists.",
     "intro": "We are here to help with product questions, order updates, and health advice you can trust.",
+    "whatsappTitle": "Chat with us on WhatsApp",
+    "whatsappBody": "Message us any time for product advice, order help, or delivery questions — our team replies quickly.",
+    "whatsappCta": "Open WhatsApp",
+    "phoneLabel": "Or call us",
+    "deliveryAreaNote": "We currently deliver within Cairo and Giza.",
     "ordersTitle": "Questions about an order",
     "ordersBody": "Sign in to your account to see live order status, delivery details, and your full order history. Every order can be tracked from the moment it is confirmed until it reaches your door.",
     "ordersCta": "Track your orders",
@@ -237,6 +246,9 @@
     },
     "codHint": "Pay in cash when your order arrives at your door.",
     "onlinePaymentSoon": "Online card and wallet payment is coming soon.",
+    "outsideDeliveryArea": "Sorry, we currently deliver within Cairo and Giza only. Your pinned location looks outside our delivery area.",
+    "contactWhatsApp": "Chat with us on WhatsApp",
+    "whatsappPrefill": "Hi Elshabrawy Pharmacy, I'd like to ask about delivery to my area.",
     "promoApplied": "Promo code {code} applied",
     "reviewTitle": "Review & place order",
     "qty": "Qty {qty}",

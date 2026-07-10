@@ -1,6 +1,7 @@
-import { Plus } from "lucide-react";
+import { Plus, MessageCircle, Phone } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { whatsappLink, PHONE_DISPLAY, PHONE_LINK } from "@/lib/contact";
 
 // Every entry here must have a real destination — no placeholder/dead links.
 const FOOTER_COLUMNS = [
@@ -35,7 +36,7 @@ export default function Footer() {
     // band the bar occupies, so nothing gets visually covered either way.
     <footer className="border-t border-neutral-200 bg-white px-4 pt-7 md:px-10 md:pt-9">
       <div className="mx-auto max-w-[1280px]">
-        <div className="mb-7 grid grid-cols-2 gap-7">
+        <div className="mb-7 grid grid-cols-2 gap-7 sm:grid-cols-3">
           {FOOTER_COLUMNS.map((col) => (
             <div key={col.titleKey}>
               <div className="mb-3 font-headline text-[13px] font-bold tracking-wide text-neutral-900 uppercase">
@@ -54,6 +55,29 @@ export default function Footer() {
               </div>
             </div>
           ))}
+
+          <div>
+            <div className="mb-3 font-headline text-[13px] font-bold tracking-wide text-neutral-900 uppercase">
+              {t("contactTitle")}
+            </div>
+            <div className="flex flex-col gap-2.5">
+              <a
+                href={whatsappLink()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-[13.5px] text-neutral-500 no-underline transition-colors hover:text-primary-500"
+              >
+                <MessageCircle className="h-4 w-4 shrink-0" /> {t("whatsapp")}
+              </a>
+              <a
+                href={`tel:${PHONE_LINK}`}
+                dir="ltr"
+                className="flex items-center gap-2 text-[13.5px] text-neutral-500 no-underline transition-colors hover:text-primary-500"
+              >
+                <Phone className="h-4 w-4 shrink-0" /> {PHONE_DISPLAY}
+              </a>
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center gap-2.5 border-t border-neutral-200 py-5">
