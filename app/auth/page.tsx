@@ -26,7 +26,7 @@ const SIDE_PANEL_ITEMS = [
   { Icon: Headset, textKey: "sidePanel3" },
 ] as const;
 
-type View = "signin" | "signup";
+type View = "signin" | "signup" | "forgot";
 
 interface SignInState {
   emailOrPhone: string;
@@ -74,6 +74,10 @@ function AuthForm() {
   const [suTouched, setSuTouched] = useState<Partial<Record<keyof SignUpState, boolean>>>({});
   const [suShowPassword, setSuShowPassword] = useState(false);
   const [suShowConfirm, setSuShowConfirm] = useState(false);
+
+  const [fpEmail, setFpEmail] = useState("");
+  const [fpTouched, setFpTouched] = useState(false);
+  const [fpSent, setFpSent] = useState(false);
 
   function validateSi(state: SignInState) {
     const errors: Partial<Record<keyof SignInState, string>> = {};
@@ -163,11 +167,38 @@ function AuthForm() {
     router.refresh();
   }
 
+  function validateFpEmail(): string {
+    const v = fpEmail.trim();
+    if (!v) return t("errors.emailRequired");
+    if (!EMAIL_RE.test(v)) return t("errors.emailInvalid");
+    return "";
+  }
+
+  async function submitForgot() {
+    setFpTouched(true);
+    if (validateFpEmail()) return;
+
+    setLoading(true);
+    setErrorBanner("");
+    // The redirect target must be listed in Supabase Auth's Redirect URLs
+    // allowlist, or the email link falls back to the project's Site URL.
+    const { error } = await supabase.auth.resetPasswordForEmail(fpEmail.trim(), {
+      redirectTo: `${window.location.origin}/auth/reset`,
+    });
+    setLoading(false);
+    if (error) {
+      setErrorBanner(error.message);
+      return;
+    }
+    setFpSent(true);
+  }
+
   function goHome() {
     router.push("/");
   }
 
   const isSignIn = view === "signin";
+  const isForgot = view === "forgot";
 
   const tabActive =
     "flex-1 rounded-full py-2.5 font-label text-[13.5px] font-bold bg-white text-neutral-900 shadow-sm";
@@ -212,14 +243,16 @@ function AuthForm() {
 
           <div className="flex-1 basis-[460px] rounded-[28px] bg-white p-7 sm:p-10 md:rounded-s-none md:rounded-e-[28px]">
             <div className="flex flex-col gap-[22px]">
-              <div className="flex rounded-full bg-neutral-100 p-1">
-                <button onClick={() => { setView("signin"); setErrorBanner(""); }} className={isSignIn ? tabActive : tabInactive}>
-                  {t("signIn")}
-                </button>
-                <button onClick={() => { setView("signup"); setErrorBanner(""); }} className={!isSignIn ? tabActive : tabInactive}>
-                  {t("signUp")}
-                </button>
-              </div>
+              {!isForgot && (
+                <div className="flex rounded-full bg-neutral-100 p-1">
+                  <button onClick={() => { setView("signin"); setErrorBanner(""); }} className={isSignIn ? tabActive : tabInactive}>
+                    {t("signIn")}
+                  </button>
+                  <button onClick={() => { setView("signup"); setErrorBanner(""); }} className={!isSignIn ? tabActive : tabInactive}>
+                    {t("signUp")}
+                  </button>
+                </div>
+              )}
 
               {errorBanner && (
                 <div className="flex items-start gap-2 rounded-[10px] border border-danger-50 bg-danger-50 px-3.5 py-3 text-[13px] leading-snug text-danger-600">
@@ -228,7 +261,51 @@ function AuthForm() {
                 </div>
               )}
 
-              {isSignIn ? (
+              {isForgot ? (
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <div className="font-headline text-xl font-extrabold text-neutral-900">{t("forgotTitle")}</div>
+                    <p className="mt-1.5 text-[13.5px] leading-relaxed text-neutral-500">{t("forgotHint")}</p>
+                  </div>
+                  {fpSent ? (
+                    <>
+                      <div className="rounded-[10px] border border-secondary-100 bg-secondary-50 px-3.5 py-3 text-[13px] leading-snug text-secondary-700">
+                        {t("resetEmailSent", { email: fpEmail.trim() })}
+                      </div>
+                      <Button variant="outlined" size="lg" fullWidth onClick={() => { setView("signin"); setErrorBanner(""); }}>
+                        {t("backToSignIn")}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <label className={labelClass}>{t("email")}</label>
+                        <Input
+                          placeholder={t("emailPlaceholder")}
+                          value={fpEmail}
+                          onChange={(e) => {
+                            setFpEmail(e.target.value);
+                            setFpTouched(true);
+                            setErrorBanner("");
+                          }}
+                        />
+                        {fpTouched && validateFpEmail() && <div className={errorTextClass}>{validateFpEmail()}</div>}
+                      </div>
+                      <Button variant="primary" size="lg" fullWidth onClick={submitForgot} disabled={loading}>
+                        {loading ? t("sendingResetLink") : t("sendResetLink")}
+                      </Button>
+                      <div className="text-center text-[13.5px] text-neutral-500">
+                        <a
+                          onClick={() => { setView("signin"); setErrorBanner(""); }}
+                          className="cursor-pointer font-bold text-primary-500 no-underline"
+                        >
+                          {t("backToSignIn")}
+                        </a>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : isSignIn ? (
                 <div className="flex flex-col gap-4">
                   <div>
                     <label className={labelClass}>{t("emailOrPhone")}</label>
@@ -246,7 +323,10 @@ function AuthForm() {
                   <div>
                     <div className="flex items-center justify-between">
                       <label className={labelClass}>{t("password")}</label>
-                      <a className="cursor-pointer text-[12.5px] font-semibold text-primary-500 no-underline">
+                      <a
+                        onClick={() => { setView("forgot"); setErrorBanner(""); setFpSent(false); setFpTouched(false); }}
+                        className="cursor-pointer text-[12.5px] font-semibold text-primary-500 no-underline"
+                      >
                         {t("forgotPassword")}
                       </a>
                     </div>
