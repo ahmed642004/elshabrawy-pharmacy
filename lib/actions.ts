@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminSession } from "@/lib/queries";
 import type { Enums } from "@/lib/database.types";
@@ -325,6 +325,8 @@ export async function adjustProductStock(productId: string, delta: number): Prom
   const { error } = await supabase.rpc("adjust_product_stock", { p_product_id: productId, p_delta: delta });
   if (error) throw error;
 
+  // Stock state shows on listing cards — flush the cached catalog reads.
+  updateTag("products");
   revalidatePath("/admin");
   revalidatePath("/admin/inventory");
 }
@@ -417,7 +419,10 @@ export async function hideReview(reviewId: string, hidden: boolean): Promise<voi
   if (error) throw new Error("REVIEW_MODERATE_FAILED");
 
   revalidatePath("/admin/reviews");
-  if (row?.products?.slug) revalidatePath(`/product/${row.products.slug}`);
+  if (row?.products?.slug) {
+    updateTag(`product:${row.products.slug}`);
+    revalidatePath(`/product/${row.products.slug}`);
+  }
 }
 
 export async function deleteReviewAdmin(reviewId: string): Promise<void> {
@@ -428,7 +433,10 @@ export async function deleteReviewAdmin(reviewId: string): Promise<void> {
   if (error) throw new Error("REVIEW_MODERATE_FAILED");
 
   revalidatePath("/admin/reviews");
-  if (row?.products?.slug) revalidatePath(`/product/${row.products.slug}`);
+  if (row?.products?.slug) {
+    updateTag(`product:${row.products.slug}`);
+    revalidatePath(`/product/${row.products.slug}`);
+  }
 }
 
 function slugify(name: string): string {
@@ -523,6 +531,7 @@ export async function addProduct(formData: FormData): Promise<{ slug: string }> 
     await setProductThumbnail(supabase, inserted.id, slug, image);
   }
 
+  updateTag("products");
   revalidatePath("/admin");
   revalidatePath("/admin/inventory");
 
@@ -629,6 +638,7 @@ export async function updateProduct(formData: FormData): Promise<void> {
     await setProductThumbnail(supabase, updated.id, updated.slug, image);
   }
 
+  updateTag("products");
   revalidatePath("/admin");
   revalidatePath("/admin/inventory");
 }
@@ -681,6 +691,7 @@ export async function addProductImages(
     nextPosition += 1;
   }
 
+  updateTag("products");
   revalidatePath("/admin/inventory");
   revalidatePath(`/product/${slug}`);
   revalidatePath("/");
@@ -717,6 +728,7 @@ export async function deleteProductImage(imageId: string): Promise<void> {
       .catch(() => {});
   }
 
+  updateTag("products");
   revalidatePath("/admin/inventory");
   if (row.products?.slug) revalidatePath(`/product/${row.products.slug}`);
 }
@@ -770,6 +782,7 @@ export async function submitReview(input: SubmitReviewInput): Promise<void> {
     );
   if (error) throw error;
 
+  updateTag(`product:${input.productSlug}`);
   revalidatePath(`/product/${input.productSlug}`);
 }
 

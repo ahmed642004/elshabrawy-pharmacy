@@ -1,5 +1,7 @@
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { publicClient } from "@/lib/supabase/public";
 import type { Product, BadgeTone, StockState } from "@/components/ProductCard";
 import type { Enums, Tables } from "@/lib/database.types";
 import { PRICE_RANGES } from "@/lib/price-ranges";
@@ -37,37 +39,57 @@ export interface CategoryRow {
   imageUrl: string | null;
 }
 
-export async function getCategories(): Promise<CategoryRow[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("categories")
-    .select("id, label, label_ar, image_url")
-    .order("sort_order");
-  if (error) throw error;
-  return data.map((c) => ({ id: c.id, label: c.label, labelAr: c.label_ar, imageUrl: c.image_url }));
-}
+// Public catalog reads below are wrapped in unstable_cache(): the data is
+// identical for every visitor, so serving it from the data cache removes the
+// Supabase round-trips from SSR TTFB on every storefront request. They use
+// the cookie-less publicClient (cookies() is unavailable inside the cache).
+// Tags let mutations in lib/actions.ts invalidate instantly:
+//   "products"        — any product/listing change
+//   "product:<slug>"  — one product's detail page (e.g. a new review)
+//   "categories"      — category rows
+// `revalidate` is only a safety net behind the tags.
+const CATALOG_REVALIDATE_S = 300;
 
-export async function getPopularProducts(): Promise<Product[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("products")
-    .select(PRODUCT_SELECT_WITH_IMAGES)
-    .eq("is_popular", true)
-    .order("created_at");
-  if (error) throw error;
-  return data.map(toProduct);
-}
+export const getCategories = unstable_cache(
+  async (): Promise<CategoryRow[]> => {
+    const { data, error } = await publicClient
+      .from("categories")
+      .select("id, label, label_ar, image_url")
+      .order("sort_order");
+    if (error) throw error;
+    return data.map((c) => ({ id: c.id, label: c.label, labelAr: c.label_ar, imageUrl: c.image_url }));
+  },
+  ["categories"],
+  { tags: ["categories"], revalidate: 3600 }
+);
+
+export const getPopularProducts = unstable_cache(
+  async (): Promise<Product[]> => {
+    const { data, error } = await publicClient
+      .from("products")
+      .select(PRODUCT_SELECT_WITH_IMAGES)
+      .eq("is_popular", true)
+      .order("created_at");
+    if (error) throw error;
+    return data.map(toProduct);
+  },
+  ["popular-products"],
+  { tags: ["products"], revalidate: CATALOG_REVALIDATE_S }
+);
 
 export interface ListingProduct extends Product {
   category: string;
 }
 
-export async function getBrands(): Promise<string[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("get_distinct_brands");
-  if (error) throw error;
-  return data.map((row) => row.brand).filter((b): b is string => Boolean(b));
-}
+export const getBrands = unstable_cache(
+  async (): Promise<string[]> => {
+    const { data, error } = await publicClient.rpc("get_distinct_brands");
+    if (error) throw error;
+    return data.map((row) => row.brand).filter((b): b is string => Boolean(b));
+  },
+  ["brands"],
+  { tags: ["products"], revalidate: 3600 }
+);
 
 function buildPriceOrFilter(rangeIds: string[]): string {
   const clauses = rangeIds
@@ -97,9 +119,11 @@ export interface ProductFilters {
 // itself — the database only ever returns matching rows, so this scales as
 // the catalog grows instead of shipping every product to the browser and
 // filtering client-side.
-export async function getFilteredProducts(filters: ProductFilters): Promise<ListingProduct[]> {
-  const supabase = await createClient();
-  let query = supabase.from("products").select(PRODUCT_SELECT_WITH_IMAGES);
+export const getFilteredProducts = unstable_cache(
+  async (filters: ProductFilters): Promise<ListingProduct[]> => {
+    // unstable_cache keys on the serialized arguments, so each distinct
+    // filter/sort combination gets its own cache entry.
+    let query = publicClient.from("products").select(PRODUCT_SELECT_WITH_IMAGES);
 
   if (filters.categoryIds?.length) query = query.in("category_id", filters.categoryIds);
   if (filters.brands?.length) query = query.in("brand", filters.brands);
@@ -114,10 +138,13 @@ export async function getFilteredProducts(filters: ProductFilters): Promise<List
   else if (filters.sort === "name-asc") query = query.order("name", { ascending: true });
   else query = query.order("created_at");
 
-  const { data, error } = await query;
-  if (error) throw error;
-  return data.map((row) => ({ ...toProduct(row), category: row.category_id ?? "" }));
-}
+    const { data, error } = await query;
+    if (error) throw error;
+    return data.map((row) => ({ ...toProduct(row), category: row.category_id ?? "" }));
+  },
+  ["filtered-products"],
+  { tags: ["products"], revalidate: CATALOG_REVALIDATE_S }
+);
 
 export interface ProductDetail extends Product {
   category: string;
@@ -134,11 +161,8 @@ export interface ProductDetail extends Product {
   reviews: { authorName: string; rating: number; body: string | null; createdAt: string }[];
 }
 
-// Wrapped in React cache() so generateMetadata() and the page body share one
-// Supabase fetch per request instead of hitting it twice.
-export const getProductBySlug = cache(async (slug: string): Promise<ProductDetail | null> => {
-  const supabase = await createClient();
-  const { data: row, error } = await supabase
+async function fetchProductBySlug(slug: string): Promise<ProductDetail | null> {
+  const { data: row, error } = await publicClient
     .from("products")
     .select("*, categories(label), product_images(url, position), reviews(id, author_name, rating, body, created_at)")
     .eq("slug", slug)
@@ -172,7 +196,17 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
       createdAt: r.created_at,
     })),
   };
-});
+}
+
+// React cache() dedupes generateMetadata() + page body within one request;
+// unstable_cache persists across requests. The per-call wrapper is how
+// unstable_cache gets a per-slug tag (options can't depend on arguments).
+export const getProductBySlug = cache((slug: string): Promise<ProductDetail | null> =>
+  unstable_cache(() => fetchProductBySlug(slug), ["product-by-slug", slug], {
+    tags: ["products", `product:${slug}`],
+    revalidate: CATALOG_REVALIDATE_S,
+  })()
+);
 
 // Lightweight slug list for the sitemap — no images/reviews/etc.
 export async function getAllProductSlugs(): Promise<{ slug: string; createdAt: string }[]> {
@@ -300,17 +334,20 @@ export async function searchProducts(query: string): Promise<ListingProduct[]> {
   return data.map((row) => ({ ...toProduct(row), category: row.category_id ?? "" }));
 }
 
-export async function getRelatedProducts(categoryId: string, excludeSlug: string): Promise<Product[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("products")
-    .select(PRODUCT_SELECT_WITH_IMAGES)
-    .eq("category_id", categoryId)
-    .neq("slug", excludeSlug)
-    .limit(6);
-  if (error) throw error;
-  return data.map(toProduct);
-}
+export const getRelatedProducts = unstable_cache(
+  async (categoryId: string, excludeSlug: string): Promise<Product[]> => {
+    const { data, error } = await publicClient
+      .from("products")
+      .select(PRODUCT_SELECT_WITH_IMAGES)
+      .eq("category_id", categoryId)
+      .neq("slug", excludeSlug)
+      .limit(6);
+    if (error) throw error;
+    return data.map(toProduct);
+  },
+  ["related-products"],
+  { tags: ["products"], revalidate: CATALOG_REVALIDATE_S }
+);
 
 export interface AddressRow {
   id: string;
