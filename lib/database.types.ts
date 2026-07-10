@@ -437,6 +437,27 @@ export type Database = {
           },
         ]
       }
+      store_settings: {
+        Row: {
+          delivery_fee: number
+          free_delivery_threshold: number
+          id: boolean
+          updated_at: string
+        }
+        Insert: {
+          delivery_fee?: number
+          free_delivery_threshold?: number
+          id?: boolean
+          updated_at?: string
+        }
+        Update: {
+          delivery_fee?: number
+          free_delivery_threshold?: number
+          id?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

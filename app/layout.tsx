@@ -6,6 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { getLocale, getTranslations } from "next-intl/server";
 import { CartProvider } from "@/lib/cart-context";
 import ToastProvider from "@/components/ui/ToastProvider";
+import { getDeliverySettings } from "@/lib/queries";
 import { siteUrl } from "@/lib/site";
 import "./globals.css";
 
@@ -71,7 +72,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = await getLocale();
+  const [locale, deliverySettings] = await Promise.all([getLocale(), getDeliverySettings()]);
 
   return (
     <html
@@ -81,7 +82,7 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <NextIntlClientProvider>
-          <CartProvider>
+          <CartProvider deliverySettings={deliverySettings}>
             <ToastProvider>{children}</ToastProvider>
           </CartProvider>
         </NextIntlClientProvider>

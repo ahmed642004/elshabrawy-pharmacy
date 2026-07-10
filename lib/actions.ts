@@ -407,6 +407,38 @@ export async function deletePromoCode(code: string): Promise<void> {
   revalidatePath("/admin/promos");
 }
 
+interface DeliverySettingsInput {
+  freeDeliveryThreshold: number;
+  deliveryFee: number;
+}
+
+// Writes the singleton store_settings row that both create_order() and the
+// storefront's getDeliverySettings() read. Numbers are re-validated here (the
+// DB check constraints are the real backstop) and the "settings" cache tag is
+// flushed so storefront cart/checkout/home totals reflect the change on the
+// next request.
+export async function updateDeliverySettings(input: DeliverySettingsInput): Promise<void> {
+  await assertAdmin();
+  if (!Number.isFinite(input.freeDeliveryThreshold) || input.freeDeliveryThreshold < 0) {
+    throw new Error("INVALID_THRESHOLD");
+  }
+  if (!Number.isFinite(input.deliveryFee) || input.deliveryFee < 0) throw new Error("INVALID_FEE");
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("store_settings")
+    .update({
+      free_delivery_threshold: input.freeDeliveryThreshold,
+      delivery_fee: input.deliveryFee,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", true);
+  if (error) throw new Error("SETTINGS_SAVE_FAILED");
+
+  updateTag("settings");
+  revalidatePath("/admin/settings");
+}
+
 export async function hideReview(reviewId: string, hidden: boolean): Promise<void> {
   await assertAdmin();
   const supabase = await createClient();

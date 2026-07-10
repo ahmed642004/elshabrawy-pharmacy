@@ -10,8 +10,12 @@ import { getCartTotals, formatEGP } from "@/lib/cart-totals";
 export default function OrderSummary({ hasOutOfStock = false }: { hasOutOfStock?: boolean }) {
   const router = useRouter();
   const t = useTranslations("cart");
-  const { items, promoInput, setPromoInput, promo, promoError, applyPromo } = useCart();
-  const { subtotal, deliveryFree, deliveryFee, discount, total } = getCartTotals(items, promo?.discount ?? 0);
+  const { items, promoInput, setPromoInput, promo, promoError, applyPromo, deliverySettings } = useCart();
+  const { subtotal, deliveryFree, deliveryFee, discount, total } = getCartTotals(
+    items,
+    promo?.discount ?? 0,
+    deliverySettings
+  );
 
   return (
     <div className="flex flex-col gap-6 rounded-[14px] bg-white p-6 shadow-sm md:p-7">

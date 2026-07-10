@@ -15,7 +15,7 @@ export default function CartPageClient() {
   const router = useRouter();
   const t = useTranslations("cart");
   const tListing = useTranslations("listing");
-  const { items, savedItems, addItem, removeItem, moveToCart, promo } = useCart();
+  const { items, savedItems, addItem, removeItem, moveToCart, promo, deliverySettings } = useCart();
   const [toast, setToast] = useState<CartItem | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -40,7 +40,7 @@ export default function CartPageClient() {
   }
 
   const isEmpty = items.length === 0 && savedItems.length === 0;
-  const { total } = getCartTotals(items, promo?.discount ?? 0);
+  const { total } = getCartTotals(items, promo?.discount ?? 0, deliverySettings);
   // create_order() would reject an out-of-stock line server-side anyway —
   // this just surfaces that up front instead of letting checkout fail.
   const hasOutOfStock = items.some((i) => i.stock === "out");

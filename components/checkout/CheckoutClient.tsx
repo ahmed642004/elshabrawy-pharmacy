@@ -21,7 +21,7 @@ export default function CheckoutClient({ addresses }: { addresses: Address[] }) 
   const router = useRouter();
   const t = useTranslations("checkout");
   const tCart = useTranslations("cart");
-  const { items, promo, clearCart } = useCart();
+  const { items, promo, clearCart, deliverySettings } = useCart();
 
   const [stepIndex, setStepIndex] = useState(0);
 
@@ -197,7 +197,7 @@ export default function CheckoutClient({ addresses }: { addresses: Address[] }) 
       : "—";
   const recapPayment = t("methods.cod");
 
-  const { total } = getCartTotals(items, promo?.discount ?? 0);
+  const { total } = getCartTotals(items, promo?.discount ?? 0, deliverySettings);
 
   if (orderPlaced) {
     return (

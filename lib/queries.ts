@@ -6,6 +6,7 @@ import type { Product, BadgeTone, StockState } from "@/components/ProductCard";
 import type { Enums, Tables } from "@/lib/database.types";
 import { PRICE_RANGES } from "@/lib/price-ranges";
 import { cairoDateKey } from "@/lib/admin-stats";
+import { DEFAULT_DELIVERY_SETTINGS, type DeliverySettings } from "@/lib/cart-totals";
 
 type ProductRow = Tables<"products"> & {
   product_images?: Pick<Tables<"product_images">, "url" | "position">[];
@@ -61,6 +62,28 @@ export const getCategories = unstable_cache(
   },
   ["categories"],
   { tags: ["categories"], revalidate: 3600 }
+);
+
+// Admin-editable delivery rule (free-delivery threshold + flat fee), read on
+// every storefront request for cart/checkout/home display. Cached + tagged
+// "settings" so updateDeliverySettings() in lib/actions.ts invalidates it
+// instantly; falls back to the historical 300/40 defaults if the singleton
+// row is ever unreadable, matching create_order()'s own coalesce().
+export const getDeliverySettings = unstable_cache(
+  async (): Promise<DeliverySettings> => {
+    const { data, error } = await publicClient
+      .from("store_settings")
+      .select("free_delivery_threshold, delivery_fee")
+      .eq("id", true)
+      .maybeSingle();
+    if (error || !data) return DEFAULT_DELIVERY_SETTINGS;
+    return {
+      freeDeliveryThreshold: Number(data.free_delivery_threshold),
+      deliveryFee: Number(data.delivery_fee),
+    };
+  },
+  ["delivery-settings"],
+  { tags: ["settings"], revalidate: 3600 }
 );
 
 export const getPopularProducts = unstable_cache(

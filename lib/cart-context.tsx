@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { usePathname } from "next/navigation";
 import type { createClient } from "@/lib/supabase/client";
 import { validatePromo } from "@/lib/actions";
-import { getCartTotals, MAX_ITEM_QTY } from "@/lib/cart-totals";
+import { getCartTotals, MAX_ITEM_QTY, DEFAULT_DELIVERY_SETTINGS, type DeliverySettings } from "@/lib/cart-totals";
 import type { StockState } from "@/components/ProductCard";
 
 export interface CartItem {
@@ -40,6 +40,10 @@ interface CartContextValue {
   applyPromo: () => Promise<void>;
   clearPromo: () => void;
   itemCount: number;
+  // Admin-configured delivery rule, fetched server-side and passed in; used by
+  // the summary components' getCartTotals calls so display matches what
+  // create_order() will charge.
+  deliverySettings: DeliverySettings;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -81,7 +85,13 @@ interface StoredCart {
   promo?: AppliedPromo | null;
 }
 
-export function CartProvider({ children }: { children: ReactNode }) {
+export function CartProvider({
+  children,
+  deliverySettings = DEFAULT_DELIVERY_SETTINGS,
+}: {
+  children: ReactNode;
+  deliverySettings?: DeliverySettings;
+}) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [savedItems, setSavedItems] = useState<CartItem[]>([]);
   const [promoInput, setPromoInput] = useState("");
@@ -352,6 +362,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         applyPromo,
         clearPromo,
         itemCount,
+        deliverySettings,
       }}
     >
       {children}

@@ -1,5 +1,6 @@
 import { Truck, ShieldCheck, Clock, Headset, type LucideIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
+import { getDeliverySettings } from "@/lib/queries";
 
 const TRUST_ITEMS: { icon: LucideIcon; titleKey: string; subKey: string }[] = [
   { icon: Truck, titleKey: "delivery", subKey: "deliverySub" },
@@ -8,8 +9,11 @@ const TRUST_ITEMS: { icon: LucideIcon; titleKey: string; subKey: string }[] = [
   { icon: Headset, titleKey: "ask", subKey: "askSub" },
 ];
 
-export default function TrustStrip() {
-  const t = useTranslations("home.trust");
+export default async function TrustStrip() {
+  const [t, { freeDeliveryThreshold }] = await Promise.all([
+    getTranslations("home.trust"),
+    getDeliverySettings(),
+  ]);
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -20,7 +24,15 @@ export default function TrustStrip() {
           </span>
           <div>
             <div className="font-headline text-[14.5px] font-bold text-neutral-900">{t(titleKey)}</div>
-            <div className="text-[12.5px] text-neutral-500">{t(subKey)}</div>
+            <div className="text-[12.5px] text-neutral-500">
+              {/* deliverySub carries the admin-configured threshold; amount is
+                  passed as a string so it interpolates raw (Latin digits) in
+                  both locales rather than being number-formatted to Arabic
+                  digits under ar. */}
+              {subKey === "deliverySub"
+                ? t("deliverySub", { amount: String(freeDeliveryThreshold) })
+                : t(subKey)}
+            </div>
           </div>
         </div>
       ))}

@@ -111,7 +111,7 @@
     },
     "trust": {
       "delivery": "Free delivery",
-      "deliverySub": "On orders over EGP 300",
+      "deliverySub": "On orders over EGP {amount}",
       "licensed": "Licensed pharmacy",
       "licensedSub": "Verified & regulated",
       "fast": "2-hour delivery",
