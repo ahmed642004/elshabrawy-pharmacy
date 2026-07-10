@@ -25,29 +25,28 @@ import "./globals.css";
 const publicSans = Public_Sans({
   variable: "--font-public-sans",
   subsets: ["latin"],
-  display: "optional",
-  preload: false,
+  display: "swap", // <--- Changed from optional
+  preload: true, // <--- Changed from false to ensure fast delivery
 });
 
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
-  display: "optional",
-  preload: false,
+  display: "swap", // <--- Changed from optional
+  preload: true, // <--- Changed from false
 });
 
-// Arabic-capable font for the RTL locale — globals.css swaps the headline/
-// body font variables to Cairo under html[dir="rtl"]. Only the arabic
-// subset is preloaded (Arabic is the default locale); the latin subset
-// loads on demand for Latin text.
 const cairo = Cairo({
   variable: "--font-cairo",
   subsets: ["arabic"],
-  display: "optional",
+  display: "swap", // <--- Changed from optional
+  preload: true, // Keep preloaded since Arabic is your default locale
 });
-
 export async function generateMetadata(): Promise<Metadata> {
-  const [t, locale] = await Promise.all([getTranslations("common"), getLocale()]);
+  const [t, locale] = await Promise.all([
+    getTranslations("common"),
+    getLocale(),
+  ]);
   return {
     metadataBase: new URL(siteUrl()),
     title: {
