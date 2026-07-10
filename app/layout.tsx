@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Public_Sans, Inter, Cairo } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { getLocale, getTranslations } from "next-intl/server";
 import { CartProvider } from "@/lib/cart-context";
 import ToastProvider from "@/components/ui/ToastProvider";
@@ -84,6 +86,8 @@ export default async function RootLayout({
             <ToastProvider>{children}</ToastProvider>
           </CartProvider>
         </NextIntlClientProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
