@@ -20,6 +20,7 @@ const FOOTER_COLUMNS = [
       { key: "track", href: "/account/orders" },
       { key: "about", href: "/about" },
       { key: "contact", href: "/contact" },
+      { key: "terms", href: "/terms" },
     ],
   },
 ] as const;

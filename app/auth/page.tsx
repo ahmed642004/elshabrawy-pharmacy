@@ -474,7 +474,17 @@ function AuthForm() {
                     />
                     <span className="text-[13px] leading-snug text-neutral-700">
                       {t.rich("agree", {
-                        terms: (chunks) => <a key="terms" className="font-semibold text-primary-500 no-underline">{chunks}</a>,
+                        terms: (chunks) => (
+                          <a
+                            key="terms"
+                            href="/terms"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-semibold text-primary-500 no-underline"
+                          >
+                            {chunks}
+                          </a>
+                        ),
                         privacy: (chunks) => <a key="privacy" className="font-semibold text-primary-500 no-underline">{chunks}</a>,
                       })}
                     </span>
