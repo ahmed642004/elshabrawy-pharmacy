@@ -9,12 +9,20 @@ import { createClient } from "@/lib/supabase/client";
 
 type Phase = "checking" | "ready" | "invalid" | "done";
 
-// Landing page for the password-recovery email link. The browser Supabase
-// client exchanges the ?code= in the URL for a session automatically
-// (detectSessionInUrl); this page waits for that session, then lets the
-// user set a new password via auth.updateUser(). Expired/used links land
-// here with an #error= fragment instead of a code — shown as the invalid
-// state with a path back to requesting a fresh link.
+// Landing page for the password-recovery email link.
+//
+// Primary path is the device-independent token-hash flow: the email template
+// links to /auth/reset?token_hash=...&type=recovery, and verifyOtp() redeems
+// that server-side one-time token into a session on whatever device opens it.
+// This is what makes "request on desktop, click on phone" work — unlike the
+// PKCE ?code= flow, which needs a code verifier stashed in the requesting
+// browser's localStorage and so fails cross-device.
+//
+// Fallback path (no token_hash in the URL): honor an existing recovery
+// session, e.g. a same-browser ?code= link the SSR client auto-exchanges via
+// detectSessionInUrl. Either way the user then sets a new password through
+// auth.updateUser(). Expired/used links show the invalid state with a path
+// back to requesting a fresh one.
 export default function ResetPasswordPage() {
   const router = useRouter();
   const t = useTranslations("auth");
@@ -33,37 +41,49 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     let settled = false;
-
-    const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
+    const finish = (next: Phase) => {
       if (settled) return;
+      settled = true;
+      setPhase(next);
+    };
+
+    const params = new URLSearchParams(window.location.search);
+    const tokenHash = params.get("token_hash");
+    const type = params.get("type");
+
+    // A used/expired link arrives as #error=...&error_code=otp_expired — no
+    // session will ever materialize, so fail fast before anything else.
+    if (window.location.hash.includes("error=")) {
+      finish("invalid");
+      return;
+    }
+
+    if (tokenHash) {
+      // Device-independent path: redeem the one-time recovery token into a
+      // session here, regardless of which browser opened the email.
+      supabase.auth
+        .verifyOtp({ type: (type as "recovery") || "recovery", token_hash: tokenHash })
+        .then(({ error }) => finish(error ? "invalid" : "ready"));
+      return;
+    }
+
+    // Fallback: same-browser ?code= links, which the SSR client exchanges
+    // automatically (detectSessionInUrl) and surfaces via onAuthStateChange
+    // or an already-present session.
+    const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
       if (session && (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
-        settled = true;
-        setPhase("ready");
+        finish("ready");
       }
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (settled) return;
-      // A used/expired link arrives as #error=...&error_code=otp_expired —
-      // no session will ever materialize, so fail fast.
-      if (window.location.hash.includes("error=")) {
-        settled = true;
-        setPhase("invalid");
-      } else if (session) {
-        settled = true;
-        setPhase("ready");
-      }
+      if (session) finish("ready");
     });
 
-    // The code exchange is a network round-trip; if no session shows up
-    // within a generous window, the link is bad (or from another browser —
-    // PKCE recovery links only work where the reset was requested).
-    const timer = setTimeout(() => {
-      if (!settled) {
-        settled = true;
-        setPhase("invalid");
-      }
-    }, 5000);
+    // The code exchange is a network round-trip; if no session shows up within
+    // a generous window, the link is bad (or a PKCE link opened in a browser
+    // other than the one that requested it).
+    const timer = setTimeout(() => finish("invalid"), 5000);
 
     return () => {
       subscription.subscription.unsubscribe();
