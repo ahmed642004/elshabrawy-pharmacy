@@ -8,6 +8,7 @@ import { Search, MapPin, User, ShoppingCart, Menu, X, LogOut, Pill, LayoutDashbo
 import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import Logo from "@/components/Logo";
+import Wordmark from "@/components/Wordmark";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
 import { useCart } from "@/lib/cart-context";
 import { formatEGP } from "@/lib/cart-totals";
@@ -215,9 +216,7 @@ export default function HeaderClient({
         <div className="mx-auto flex max-w-[1280px] items-center gap-6 px-6 py-3.5">
           <Link href="/" className="flex shrink-0 items-center gap-2.5">
             <Logo size={36} priority />
-            <span className="whitespace-nowrap font-headline text-xl font-extrabold tracking-tight text-neutral-900">
-              Elshabrawy <span className="text-primary-500">Pharmacy</span>
-            </span>
+            <Wordmark size={20} className="shrink-0" />
           </Link>
 
           <form onSubmit={handleSearchSubmit} className="relative max-w-[480px] flex-1">
@@ -360,9 +359,9 @@ export default function HeaderClient({
             <Menu className="h-5 w-5 text-neutral-700" />
           </button>
           <Link href="/" className="flex min-w-0 flex-1 items-center gap-2">
-            <Logo size={32} priority />
-            <span className="overflow-hidden text-ellipsis whitespace-nowrap font-headline text-base font-extrabold tracking-tight text-neutral-900">
-              Elshabrawy <span className="text-primary-500">Pharmacy</span>
+            <Logo size={32} priority className="shrink-0" />
+            <span className="min-w-0 overflow-hidden">
+              <Wordmark size={16} />
             </span>
           </Link>
           <Link

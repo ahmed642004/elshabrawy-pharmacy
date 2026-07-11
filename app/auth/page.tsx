@@ -15,6 +15,7 @@ import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Logo from "@/components/Logo";
+import Wordmark from "@/components/Wordmark";
 import { createClient } from "@/lib/supabase/client";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -215,9 +216,7 @@ function AuthForm() {
           className="flex cursor-pointer items-center gap-2.5 no-underline"
         >
           <Logo size={34} priority />
-          <span className="whitespace-nowrap font-headline text-lg font-extrabold tracking-tight text-neutral-900">
-            Elshabrawy <span className="text-primary-500">Pharmacy</span>
-          </span>
+          <Wordmark size={18} />
         </a>
       </header>
 

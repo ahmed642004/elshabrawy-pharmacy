@@ -6,6 +6,7 @@ import { Check, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import Logo from "@/components/Logo";
+import Wordmark from "@/components/Wordmark";
 import { createClient } from "@/lib/supabase/client";
 
 type Phase = "checking" | "ready" | "invalid" | "done";
@@ -126,9 +127,7 @@ export default function ResetPasswordPage() {
       <header className="flex justify-center px-5 pt-5">
         <a onClick={() => router.push("/")} className="flex cursor-pointer items-center gap-2.5 no-underline">
           <Logo size={34} priority />
-          <span className="whitespace-nowrap font-headline text-lg font-extrabold tracking-tight text-neutral-900">
-            Elshabrawy <span className="text-primary-500">Pharmacy</span>
-          </span>
+          <Wordmark size={18} />
         </a>
       </header>
 
