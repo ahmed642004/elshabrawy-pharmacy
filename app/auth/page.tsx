@@ -485,7 +485,17 @@ function AuthForm() {
                             {chunks}
                           </a>
                         ),
-                        privacy: (chunks) => <a key="privacy" className="font-semibold text-primary-500 no-underline">{chunks}</a>,
+                        privacy: (chunks) => (
+                          <a
+                            key="privacy"
+                            href="/privacy"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-semibold text-primary-500 no-underline"
+                          >
+                            {chunks}
+                          </a>
+                        ),
                       })}
                     </span>
                   </label>
