@@ -1,30 +1,32 @@
-import Image from "next/image";
-import logoSrc from "@/public/elshabrawy_pharmacy_logo.jpg";
-
 interface LogoProps {
   // Rendered size in px — the badge is always square.
   size: number;
-  // Set on the single above-the-fold instance per page (the header logo,
-  // or the lone mark on the auth pages) so Next preloads it as an LCP
-  // candidate instead of lazy-loading it.
+  // Kept for call-site compatibility with the previous next/image version;
+  // inline SVG has no network fetch to prioritize.
   priority?: boolean;
   className?: string;
 }
 
-// Single source for the pharmacy's badge mark. Every call site previously
-// duplicated a Lucide <Plus> icon inside a hand-styled rounded box.
-// Static-importing the logo lets next/image read its intrinsic size instead
-// of us guessing dimensions, and centralizes the asset so a future logo
-// swap is a one-file change instead of six.
-export default function Logo({ size, priority = false, className = "" }: LogoProps) {
+// Single source for the pharmacy's badge mark ("Trust Shield": a shield
+// carrying the pharmacy cross). Inlined as SVG rather than a raster asset —
+// it's pure vector shapes in the brand palette (#0F52FF), so this stays crisp
+// at every call-site size with no image request, optimizer round-trip, or CLS.
+export default function Logo({ size, className = "" }: LogoProps) {
   return (
-    <Image
-      src={logoSrc}
-      alt="Elshabrawy Pharmacy"
+    <svg
       width={size}
       height={size}
-      priority={priority}
-      className={`shrink-0 rounded-[10px] shadow-[0_6px_18px_rgba(15,82,255,0.28)] ${className}`}
-    />
+      viewBox="0 0 100 100"
+      role="img"
+      aria-label="Elshabrawy Pharmacy"
+      className={`shrink-0 ${className}`}
+    >
+      <path
+        d="M50 10 L84 22 L84 50 C84 71 69 84 50 90 C31 84 16 71 16 50 L16 22 Z"
+        fill="#0F52FF"
+      />
+      <rect x="44" y="34" width="12" height="32" rx="4" fill="#fff" />
+      <rect x="34" y="44" width="32" height="12" rx="4" fill="#fff" />
+    </svg>
   );
 }
