@@ -1,5 +1,5 @@
 import Image from "next/image";
-import logoSrc from "@/public/logo.svg";
+import logoSrc from "@/public/elshabrawy_pharmacy_logo.jpg";
 
 interface LogoProps {
   // Rendered size in px — the badge is always square.
@@ -11,11 +11,11 @@ interface LogoProps {
   className?: string;
 }
 
-// Single source for the pharmacy's badge mark (public/logo.svg) — every call
-// site previously duplicated a Lucide <Plus> icon inside a hand-styled
-// rounded box. Static-importing the SVG lets next/image read its intrinsic
-// size instead of us guessing dimensions, and centralizes the asset so a
-// future logo swap is a one-file change instead of six.
+// Single source for the pharmacy's badge mark. Every call site previously
+// duplicated a Lucide <Plus> icon inside a hand-styled rounded box.
+// Static-importing the logo lets next/image read its intrinsic size instead
+// of us guessing dimensions, and centralizes the asset so a future logo
+// swap is a one-file change instead of six.
 export default function Logo({ size, priority = false, className = "" }: LogoProps) {
   return (
     <Image

@@ -14,12 +14,6 @@ const nextConfig: NextConfig = {
     // Product/category images are immutable per URL (new upload = new path),
     // so let the optimizer cache aggressively.
     minimumCacheTTL: 60 * 60 * 24 * 30,
-    // The optimizer refuses to serve SVGs by default (a malicious uploaded
-    // SVG could embed <script>). public/logo.svg is our own committed,
-    // trusted asset, not user content, so this is safe to enable — paired
-    // with the strict CSP Next's own docs recommend for this exact case.
-    dangerouslyAllowSVG: true,
-    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     remotePatterns: [
       {
         protocol: "https",
