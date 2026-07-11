@@ -3,7 +3,6 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  Plus,
   ShieldCheck,
   Truck,
   Headset,
@@ -15,6 +14,7 @@ import {
 import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import Logo from "@/components/Logo";
 import { createClient } from "@/lib/supabase/client";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -214,9 +214,7 @@ function AuthForm() {
           onClick={goHome}
           className="flex cursor-pointer items-center gap-2.5 no-underline"
         >
-          <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px] bg-primary-500 shadow-[0_6px_18px_rgba(15,82,255,0.28)]">
-            <Plus className="h-[19px] w-[19px] text-white" />
-          </span>
+          <Logo size={34} priority />
           <span className="whitespace-nowrap font-headline text-lg font-extrabold tracking-tight text-neutral-900">
             Elshabrawy <span className="text-primary-500">Pharmacy</span>
           </span>

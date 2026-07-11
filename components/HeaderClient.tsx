@@ -4,9 +4,10 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Plus, Search, MapPin, User, ShoppingCart, Menu, X, LogOut, Pill, LayoutDashboard, Package } from "lucide-react";
+import { Search, MapPin, User, ShoppingCart, Menu, X, LogOut, Pill, LayoutDashboard, Package } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
+import Logo from "@/components/Logo";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
 import { useCart } from "@/lib/cart-context";
 import { formatEGP } from "@/lib/cart-totals";
@@ -213,9 +214,7 @@ export default function HeaderClient({
       <header className="sticky top-0 z-30 hidden border-b border-neutral-200 bg-white/90 backdrop-blur md:block">
         <div className="mx-auto flex max-w-[1280px] items-center gap-6 px-6 py-3.5">
           <Link href="/" className="flex shrink-0 items-center gap-2.5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary-500 shadow-[0_6px_18px_rgba(15,82,255,0.28)]">
-              <Plus className="h-5 w-5 text-white" />
-            </span>
+            <Logo size={36} priority />
             <span className="whitespace-nowrap font-headline text-xl font-extrabold tracking-tight text-neutral-900">
               Elshabrawy <span className="text-primary-500">Pharmacy</span>
             </span>
@@ -361,9 +360,7 @@ export default function HeaderClient({
             <Menu className="h-5 w-5 text-neutral-700" />
           </button>
           <Link href="/" className="flex min-w-0 flex-1 items-center gap-2">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-primary-500 shadow-[0_6px_18px_rgba(15,82,255,0.28)]">
-              <Plus className="h-[18px] w-[18px] text-white" />
-            </span>
+            <Logo size={32} priority />
             <span className="overflow-hidden text-ellipsis whitespace-nowrap font-headline text-base font-extrabold tracking-tight text-neutral-900">
               Elshabrawy <span className="text-primary-500">Pharmacy</span>
             </span>

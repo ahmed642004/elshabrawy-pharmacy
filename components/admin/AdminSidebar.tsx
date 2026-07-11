@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Package, Boxes, TicketPercent, Star, Plus, Stethoscope, Store, Settings } from "lucide-react";
+import { LayoutDashboard, Package, Boxes, TicketPercent, Star, Stethoscope, Store, Settings } from "lucide-react";
+import LogoMark from "@/components/Logo";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
@@ -16,9 +17,7 @@ const NAV_ITEMS = [
 function Logo() {
   return (
     <div className="flex items-center gap-2.5">
-      <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px] bg-primary-500 shadow-[0_1px_2px_rgba(15,82,255,0.25)]">
-        <Plus className="h-[18px] w-[18px] text-white" strokeWidth={2.5} />
-      </span>
+      <LogoMark size={34} />
       <div className="leading-tight">
         <div className="font-headline text-[15px] leading-tight font-bold text-neutral-900">
           Elshabrawy <span className="text-primary-500">Pharmacy</span>

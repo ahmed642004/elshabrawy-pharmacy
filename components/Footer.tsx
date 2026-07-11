@@ -1,6 +1,7 @@
-import { Plus, MessageCircle, Phone } from "lucide-react";
+import { MessageCircle, Phone } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import Logo from "@/components/Logo";
 import { whatsappLink, PHONE_DISPLAY, PHONE_LINK } from "@/lib/contact";
 
 // Every entry here must have a real destination — no placeholder/dead links.
@@ -83,9 +84,7 @@ export default function Footer() {
         </div>
 
         <div className="flex items-center gap-2.5 border-t border-neutral-200 py-5">
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] bg-primary-500">
-            <Plus className="h-4 w-4 text-white" />
-          </span>
+          <Logo size={28} />
           <span className="text-[13px] text-neutral-500">
             {t("copyright", { year: new Date().getFullYear() })}
           </span>
