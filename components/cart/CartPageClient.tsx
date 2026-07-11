@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { ChevronRight, ShoppingCart } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
@@ -15,10 +16,17 @@ export default function CartPageClient() {
   const router = useRouter();
   const t = useTranslations("cart");
   const tListing = useTranslations("listing");
-  const { items, savedItems, addItem, removeItem, moveToCart, promo, deliverySettings } = useCart();
+  const {
+    items,
+    savedItems,
+    addItem,
+    removeItem,
+    moveToCart,
+    promo,
+    deliverySettings,
+  } = useCart();
   const [toast, setToast] = useState<CartItem | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   useEffect(() => {
     return () => {
       if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -40,7 +48,11 @@ export default function CartPageClient() {
   }
 
   const isEmpty = items.length === 0 && savedItems.length === 0;
-  const { total } = getCartTotals(items, promo?.discount ?? 0, deliverySettings);
+  const { total } = getCartTotals(
+    items,
+    promo?.discount ?? 0,
+    deliverySettings,
+  );
   // create_order() would reject an out-of-stock line server-side anyway —
   // this just surfaces that up front instead of letting checkout fail.
   const hasOutOfStock = items.some((i) => i.stock === "out");
@@ -69,8 +81,12 @@ export default function CartPageClient() {
           <span className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-tertiary-100">
             <ShoppingCart className="h-[34px] w-[34px] text-primary-500" />
           </span>
-          <div className="font-headline text-xl font-extrabold text-neutral-900">{t("empty")}</div>
-          <div className="max-w-[320px] text-sm text-neutral-500">{t("emptyHint")}</div>
+          <div className="font-headline text-xl font-extrabold text-neutral-900">
+            {t("empty")}
+          </div>
+          <div className="max-w-[320px] text-sm text-neutral-500">
+            {t("emptyHint")}
+          </div>
           <Button variant="primary" size="lg" onClick={() => router.push("/")}>
             {t("browse")}
           </Button>
@@ -79,7 +95,11 @@ export default function CartPageClient() {
         <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-[1fr_360px]">
           <div className="flex flex-col">
             {items.map((item) => (
-              <CartItemRow key={item.slug} item={item} onRemove={handleRemove} />
+              <CartItemRow
+                key={item.slug}
+                item={item}
+                onRemove={handleRemove}
+              />
             ))}
 
             {savedItems.length > 0 && (
@@ -88,15 +108,30 @@ export default function CartPageClient() {
                   {t("savedForLater", { count: savedItems.length })}
                 </div>
                 {savedItems.map((s) => (
-                  <div key={s.slug} className="flex items-center gap-3.5 border-t border-neutral-200 py-3.5">
+                  <div
+                    key={s.slug}
+                    className="flex items-center gap-3.5 border-t border-neutral-200 py-3.5"
+                  >
                     <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[10px] bg-neutral-100">
-                      <ShoppingCart className="h-5 w-5 text-neutral-300" />
+                      {s.imageUrl ? (
+                        <Image src={s.imageUrl} alt={s.name} width={56} height={56} className="h-full w-full object-cover" />
+                      ) : (
+                        <ShoppingCart className="h-5 w-5 text-neutral-300" />
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="font-headline text-sm font-bold text-neutral-900">{s.name}</div>
-                      <div className="text-[12.5px] text-neutral-500">{formatEGP(s.price)}</div>
+                      <div className="font-headline text-sm font-bold text-neutral-900">
+                        {s.name}
+                      </div>
+                      <div className="text-[12.5px] text-neutral-500">
+                        {formatEGP(s.price)}
+                      </div>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => moveToCart(s.slug)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => moveToCart(s.slug)}
+                    >
                       {t("moveToCart")}
                     </Button>
                   </div>
@@ -113,7 +148,11 @@ export default function CartPageClient() {
 
       {items.length > 0 && (
         <div className="fixed right-0 bottom-0 left-0 z-[35] flex flex-col gap-1.5 border-t border-neutral-200 bg-white px-4 py-3 shadow-[0_-4px_12px_rgba(15,23,42,0.08)] md:hidden">
-          {hasOutOfStock && <div className="text-xs text-danger-500">{t("removeOutOfStock")}</div>}
+          {hasOutOfStock && (
+            <div className="text-xs text-danger-500">
+              {t("removeOutOfStock")}
+            </div>
+          )}
           <div className="flex items-center gap-3">
             <div className="min-w-0">
               <div className="text-[11.5px] text-neutral-500">{t("total")}</div>
@@ -139,7 +178,11 @@ export default function CartPageClient() {
         <div className="fixed bottom-24 left-1/2 z-[80] -translate-x-1/2 md:bottom-6">
           <div className="flex items-center gap-3.5 rounded-[10px] bg-neutral-800 px-4 py-3 text-[13.5px] whitespace-nowrap text-white shadow-lg">
             <span>{t("removedToast", { name: toast.name })}</span>
-            <button type="button" onClick={handleUndo} className="font-bold text-white underline">
+            <button
+              type="button"
+              onClick={handleUndo}
+              className="font-bold text-white underline"
+            >
               {t("undo")}
             </button>
           </div>

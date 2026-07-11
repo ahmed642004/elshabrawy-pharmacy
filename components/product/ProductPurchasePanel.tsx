@@ -15,6 +15,7 @@ interface ProductPurchasePanelProps {
   brand: string;
   name: string;
   price: number;
+  imageUrl?: string;
   wasPrice?: number;
   stock: StockState;
   rating: number | null;
@@ -33,6 +34,7 @@ export default function ProductPurchasePanel({
   brand,
   name,
   price,
+  imageUrl,
   wasPrice,
   stock,
   rating,
@@ -154,7 +156,7 @@ export default function ProductPurchasePanel({
               size="lg"
               className="min-w-[180px] flex-1"
               onClick={() => {
-                addItem({ slug, name, brand, price, stock }, qty);
+                addItem({ slug, name, brand, price, imageUrl, stock }, qty);
                 showToast(tCard("addedToast", { name }));
               }}
             >

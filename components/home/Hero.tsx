@@ -3,7 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ShieldCheck, Truck, Stethoscope, Plus, ArrowRight, TrendingUp } from "lucide-react";
+import {
+  ShieldCheck,
+  Truck,
+  Stethoscope,
+  Plus,
+  ArrowRight,
+  TrendingUp,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import { formatEGP } from "@/lib/cart-totals";
@@ -32,7 +39,10 @@ export default function Hero({ products = [] }: { products?: Product[] }) {
   useEffect(() => {
     if (products.length < 2) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const id = setInterval(() => setActive((i) => (i + 1) % products.length), 4000);
+    const id = setInterval(
+      () => setActive((i) => (i + 1) % products.length),
+      4000,
+    );
     return () => clearInterval(id);
   }, [products.length]);
 
@@ -106,7 +116,8 @@ export default function Hero({ products = [] }: { products?: Product[] }) {
         <div style={{ animation: "heroFadeUp 0.6s ease-out 0.36s both" }}>
           <Link href="/category">
             <Button variant="inverted" size="lg">
-              {t("cta")} <ArrowRight className="h-[18px] w-[18px] rtl:rotate-180" />
+              {t("cta")}{" "}
+              <ArrowRight className="h-[18px] w-[18px] rtl:rotate-180" />
             </Button>
           </Link>
         </div>
@@ -159,7 +170,10 @@ export default function Hero({ products = [] }: { products?: Product[] }) {
         {/* Pulse rings + glowing cross (deepest parallax layer). */}
         <div
           className="relative flex items-center justify-center transition-transform duration-300 ease-out"
-          style={{ transform: "translate3d(calc(var(--mx) * -10px), calc(var(--my) * -10px), 0)" }}
+          style={{
+            transform:
+              "translate3d(calc(var(--mx) * -10px), calc(var(--my) * -10px), 0)",
+          }}
         >
           {[0, 1.3, 2.6].map((delay) => (
             <span
@@ -192,7 +206,9 @@ export default function Hero({ products = [] }: { products?: Product[] }) {
                     tabIndex={i === active ? 0 : -1}
                     aria-hidden={i !== active}
                     className={`absolute inset-0 flex flex-col items-center justify-center gap-1.5 transition-[opacity,transform] duration-700 ease-out ${
-                      i === active ? "scale-100 opacity-100" : "pointer-events-none scale-90 opacity-0"
+                      i === active
+                        ? "scale-100 opacity-100"
+                        : "pointer-events-none scale-90 opacity-0"
                     }`}
                   >
                     <span className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-white p-2">
@@ -205,8 +221,12 @@ export default function Hero({ products = [] }: { products?: Product[] }) {
                         className="h-full w-full rounded-full object-contain"
                       />
                     </span>
-                    <span className="line-clamp-1 px-4 text-center font-label text-[13px] font-bold">{p.name}</span>
-                    <span className="font-headline text-[15px] font-extrabold">{formatEGP(p.price)}</span>
+                    <span className="line-clamp-1 px-4 text-center font-label text-[13px] font-bold">
+                      {p.name}
+                    </span>
+                    <span className="font-headline text-[15px] font-extrabold">
+                      {formatEGP(p.price)}
+                    </span>
                   </Link>
                 ))}
               </div>
@@ -224,61 +244,6 @@ export default function Hero({ products = [] }: { products?: Product[] }) {
               )}
             </div>
           )}
-        </div>
-
-        {/* Floating glass cards — outer div = parallax depth, inner div = bob. */}
-        <div
-          className="absolute top-[7%] left-[5%] transition-transform duration-300 ease-out"
-          style={{ transform: "translate3d(calc(var(--mx) * 22px), calc(var(--my) * 22px), 0)" }}
-        >
-          <div
-            className="flex items-center gap-2.5 rounded-[14px] bg-white/15 px-4 py-3 shadow-lg backdrop-blur-md"
-            style={{ animation: "heroFloat 5s ease-in-out infinite" }}
-          >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-white/20">
-              <Truck className="h-5 w-5" />
-            </span>
-            <div className="leading-tight">
-              <div className="font-label text-[13px] font-bold">{t("cardDelivery")}</div>
-              <div className="text-[11px] text-white/75">{t("cardDeliverySub")}</div>
-            </div>
-          </div>
-        </div>
-
-        <div
-          className="absolute right-[3%] bottom-[14%] transition-transform duration-300 ease-out"
-          style={{ transform: "translate3d(calc(var(--mx) * 32px), calc(var(--my) * 32px), 0)" }}
-        >
-          <div
-            className="flex items-center gap-2.5 rounded-[14px] bg-white/15 px-4 py-3 shadow-lg backdrop-blur-md"
-            style={{ animation: "heroFloat 6s ease-in-out 0.8s infinite" }}
-          >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-white/20">
-              <ShieldCheck className="h-5 w-5" />
-            </span>
-            <div className="leading-tight">
-              <div className="font-label text-[13px] font-bold">{t("cardLicensed")}</div>
-              <div className="text-[11px] text-white/75">{t("cardLicensedSub")}</div>
-            </div>
-          </div>
-        </div>
-
-        <div
-          className="absolute bottom-[10%] left-[16%] transition-transform duration-300 ease-out"
-          style={{ transform: "translate3d(calc(var(--mx) * 16px), calc(var(--my) * 16px), 0)" }}
-        >
-          <div
-            className="flex items-center gap-2.5 rounded-[14px] bg-white/15 px-4 py-3 shadow-lg backdrop-blur-md"
-            style={{ animation: "heroFloat 5.5s ease-in-out 1.6s infinite" }}
-          >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-white/20">
-              <Stethoscope className="h-5 w-5" />
-            </span>
-            <div className="leading-tight">
-              <div className="font-label text-[13px] font-bold">{t("cardPharmacist")}</div>
-              <div className="text-[11px] text-white/75">{t("cardPharmacistSub")}</div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

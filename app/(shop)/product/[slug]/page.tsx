@@ -148,6 +148,7 @@ export default async function ProductPage({
           brand={product.brand ?? ""}
           name={product.name}
           price={product.price}
+          imageUrl={product.images[0]}
           wasPrice={product.wasPrice}
           stock={product.stock ?? "in"}
           rating={product.rating}

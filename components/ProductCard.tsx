@@ -124,7 +124,7 @@ export default function ProductCard({ product, className = "" }: ProductCardProp
               outOfStock
                 ? handleNotifyClick
                 : () => {
-                    addItem({ slug, name, brand, price, stock });
+                    addItem({ slug, name, brand, price, imageUrl, stock });
                     showToast(tCard("addedToast", { name }));
                   }
             }

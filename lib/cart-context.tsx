@@ -1,10 +1,23 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { usePathname } from "next/navigation";
 import type { createClient } from "@/lib/supabase/client";
 import { validatePromo } from "@/lib/actions";
-import { getCartTotals, MAX_ITEM_QTY, DEFAULT_DELIVERY_SETTINGS, type DeliverySettings } from "@/lib/cart-totals";
+import {
+  getCartTotals,
+  MAX_ITEM_QTY,
+  DEFAULT_DELIVERY_SETTINGS,
+  type DeliverySettings,
+} from "@/lib/cart-totals";
 import type { StockState } from "@/components/ProductCard";
 
 export interface CartItem {
@@ -12,6 +25,7 @@ export interface CartItem {
   name: string;
   brand?: string;
   price: number;
+  imageUrl?: string;
   qty: number;
   stock: StockState;
 }
@@ -56,14 +70,18 @@ function mergeItemInto(list: CartItem[], item: CartItem): CartItem[] {
   const existing = list.find((i) => i.slug === item.slug);
   if (existing) {
     return list.map((i) =>
-      i.slug === item.slug ? { ...i, qty: Math.min(i.qty + item.qty, MAX_ITEM_QTY) } : i
+      i.slug === item.slug
+        ? { ...i, qty: Math.min(i.qty + item.qty, MAX_ITEM_QTY) }
+        : i,
     );
   }
   return [...list, { ...item, qty: Math.min(item.qty, MAX_ITEM_QTY) }];
 }
 
 function clampCartItems(list: CartItem[]): CartItem[] {
-  return list.map((i) => (i.qty > MAX_ITEM_QTY ? { ...i, qty: MAX_ITEM_QTY } : i));
+  return list.map((i) =>
+    i.qty > MAX_ITEM_QTY ? { ...i, qty: MAX_ITEM_QTY } : i,
+  );
 }
 
 // Union of the server cart and the local cart at sign-in. On a slug conflict
@@ -105,7 +123,11 @@ export function CartProvider({
   // Mirrors the latest items/savedItems for the async sign-in merge below —
   // by the time the server cart response arrives, state may have moved past
   // what the closure captured.
-  const stateRef = useRef<StoredCart>({ items: [], savedItems: [], promo: null });
+  const stateRef = useRef<StoredCart>({
+    items: [],
+    savedItems: [],
+    promo: null,
+  });
   // The signed-in user currently being synced, and whether the initial
   // server merge for that user has completed (pushes are held until it has,
   // so a pre-merge local state can't clobber the server copy).
@@ -163,72 +185,84 @@ export function CartProvider({
       startedSyncRef.current = true;
       import("@/lib/supabase/client").then((mod) => {
         if (cancelled) return;
-      const supabase = mod.createClient();
-      supabaseRef.current = supabase;
+        const supabase = mod.createClient();
+        supabaseRef.current = supabase;
 
-      ({
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange((event, session) => {
-      // Only (re)sync on events that actually change who's signed in.
-      // TOKEN_REFRESHED (and similar) fire periodically for a long-lived
-      // session and must not trigger a resync — the merge below reads
-      // localStorage, which lags behind in-flight React state until the
-      // debounced write-through catches up, so a resync here can silently
-      // clobber just-added items.
-      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "INITIAL_SESSION") return;
+        ({
+          data: { subscription },
+        } = supabase.auth.onAuthStateChange((event, session) => {
+          // Only (re)sync on events that actually change who's signed in.
+          // TOKEN_REFRESHED (and similar) fire periodically for a long-lived
+          // session and must not trigger a resync — the merge below reads
+          // localStorage, which lags behind in-flight React state until the
+          // debounced write-through catches up, so a resync here can silently
+          // clobber just-added items.
+          if (
+            event !== "SIGNED_IN" &&
+            event !== "SIGNED_OUT" &&
+            event !== "INITIAL_SESSION"
+          )
+            return;
 
-      const userId = session?.user?.id ?? null;
-      if (!userId) {
-        // Signed out: stop syncing but keep the local cart — it was this
-        // device's cart before sign-in too.
-        syncUserRef.current = null;
-        syncReadyRef.current = false;
-        return;
-      }
-      if (syncUserRef.current === userId) return;
-      syncUserRef.current = userId;
-      syncReadyRef.current = false;
+          const userId = session?.user?.id ?? null;
+          if (!userId) {
+            // Signed out: stop syncing but keep the local cart — it was this
+            // device's cart before sign-in too.
+            syncUserRef.current = null;
+            syncReadyRef.current = false;
+            return;
+          }
+          if (syncUserRef.current === userId) return;
+          syncUserRef.current = userId;
+          syncReadyRef.current = false;
 
-      // Deferred: supabase-js awaits this callback internally, so making
-      // Supabase calls inline can deadlock.
-      setTimeout(async () => {
-        const { data, error } = await supabase
-          .from("cart_items")
-          .select("qty, saved_for_later, products(slug, name, brand, price, stock)");
-        // Fail open on error: the local cart keeps working, just unsynced.
-        if (error || syncUserRef.current !== userId) return;
+          // Deferred: supabase-js awaits this callback internally, so making
+          // Supabase calls inline can deadlock.
+          setTimeout(async () => {
+            const { data, error } = await supabase
+              .from("cart_items")
+              .select(
+                "qty, saved_for_later, products(slug, name, brand, price, stock, product_images(url, position))",
+              );
+            // Fail open on error: the local cart keeps working, just unsynced.
+            if (error || syncUserRef.current !== userId) return;
 
-        const serverItems: CartItem[] = [];
-        const serverSaved: CartItem[] = [];
-        for (const row of data) {
-          if (!row.products) continue;
-          const item: CartItem = {
-            slug: row.products.slug,
-            name: row.products.name,
-            brand: row.products.brand ?? undefined,
-            price: Number(row.products.price),
-            stock: row.products.stock,
-            qty: row.qty,
-          };
-          (row.saved_for_later ? serverSaved : serverItems).push(item);
-        }
+            const serverItems: CartItem[] = [];
+            const serverSaved: CartItem[] = [];
+            for (const row of data) {
+              if (!row.products) continue;
+              const item: CartItem = {
+                slug: row.products.slug,
+                name: row.products.name,
+                brand: row.products.brand ?? undefined,
+                price: Number(row.products.price),
+                imageUrl: [...(row.products.product_images ?? [])].sort((a, b) => a.position - b.position)[0]?.url,
+                stock: row.products.stock,
+                qty: row.qty,
+              };
+              (row.saved_for_later ? serverSaved : serverItems).push(item);
+            }
 
-        const local = stateRef.current;
-        // clampCartItems here too: a slug present only server-side (no local
-        // conflict to clamp it via mergeItemInto) passes through mergeCartLists
-        // untouched, and could predate MAX_ITEM_QTY.
-        const mergedItems = clampCartItems(mergeCartLists(serverItems, local.items));
-        const inCart = new Set(mergedItems.map((i) => i.slug));
-        // A slug can't be both in the cart and saved for later; the cart wins.
-        const mergedSaved = clampCartItems(
-          mergeCartLists(serverSaved, local.savedItems).filter((i) => !inCart.has(i.slug))
-        );
+            const local = stateRef.current;
+            // clampCartItems here too: a slug present only server-side (no local
+            // conflict to clamp it via mergeItemInto) passes through mergeCartLists
+            // untouched, and could predate MAX_ITEM_QTY.
+            const mergedItems = clampCartItems(
+              mergeCartLists(serverItems, local.items),
+            );
+            const inCart = new Set(mergedItems.map((i) => i.slug));
+            // A slug can't be both in the cart and saved for later; the cart wins.
+            const mergedSaved = clampCartItems(
+              mergeCartLists(serverSaved, local.savedItems).filter(
+                (i) => !inCart.has(i.slug),
+              ),
+            );
 
-        syncReadyRef.current = true;
-        setItems(mergedItems);
-        setSavedItems(mergedSaved);
-      }, 0);
-      }));
+            syncReadyRef.current = true;
+            setItems(mergedItems);
+            setSavedItems(mergedSaved);
+          }, 0);
+        }));
       });
     };
 
@@ -269,7 +303,7 @@ export function CartProvider({
       // anything. Failures are ignored: the next cart change retries.
       supabase.rpc("replace_cart", { p_items: payload }).then(
         () => {},
-        () => {}
+        () => {},
       );
     }, PUSH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
@@ -290,9 +324,11 @@ export function CartProvider({
         return;
       }
       const clamped = Math.min(qty, MAX_ITEM_QTY);
-      setItems((prev) => prev.map((i) => (i.slug === slug ? { ...i, qty: clamped } : i)));
+      setItems((prev) =>
+        prev.map((i) => (i.slug === slug ? { ...i, qty: clamped } : i)),
+      );
     },
-    [removeItem]
+    [removeItem],
   );
 
   const saveForLater = useCallback(
@@ -302,7 +338,7 @@ export function CartProvider({
       setItems((prev) => prev.filter((i) => i.slug !== slug));
       setSavedItems((prev) => mergeItemInto(prev, item));
     },
-    [items]
+    [items],
   );
 
   const moveToCart = useCallback(
@@ -312,7 +348,7 @@ export function CartProvider({
       setSavedItems((prev) => prev.filter((i) => i.slug !== slug));
       setItems((prev) => mergeItemInto(prev, item));
     },
-    [savedItems]
+    [savedItems],
   );
 
   const applyPromo = useCallback(async () => {

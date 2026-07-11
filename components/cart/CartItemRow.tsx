@@ -1,6 +1,7 @@
 "use client";
 
 import { Pill, Minus, Plus, Trash2 } from "lucide-react";
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { useCart, type CartItem } from "@/lib/cart-context";
 import { formatEGP, MAX_ITEM_QTY } from "@/lib/cart-totals";
@@ -14,16 +15,27 @@ export default function CartItemRow({ item, onRemove }: CartItemRowProps) {
   const t = useTranslations("cart");
   const { updateQty, saveForLater } = useCart();
   const outOfStock = item.stock === "out";
-
   return (
-    <div className={`border-b border-neutral-200 py-5 ${outOfStock ? "opacity-65" : ""}`}>
+    <div
+      className={`border-b border-neutral-200 py-5 ${outOfStock ? "opacity-65" : ""}`}
+    >
       <div className="flex gap-4">
         <div
           className={`flex h-[76px] w-[76px] shrink-0 items-center justify-center rounded-[12px] bg-neutral-100 md:h-[92px] md:w-[92px] ${
             outOfStock ? "opacity-45" : ""
           }`}
         >
-          <Pill className="h-8 w-8 text-neutral-300" strokeWidth={1.5} />
+          {item.imageUrl ? (
+            <Image
+              src={item.imageUrl}
+              alt={item.name}
+              width={92}
+              height={92}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <Pill className="h-8 w-8 text-neutral-300" strokeWidth={1.5} />
+          )}
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">

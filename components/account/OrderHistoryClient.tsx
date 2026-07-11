@@ -108,7 +108,17 @@ export default function OrderHistoryClient({ orders }: { orders: AdminOrder[] })
       for (const item of live) {
         if (item.stock === "out") continue;
         const qty = order.items.find((i) => i.slug === item.slug)?.qty ?? 1;
-        addItem({ slug: item.slug, name: item.name, brand: item.brand ?? undefined, price: item.price, stock: item.stock }, qty);
+        addItem(
+          {
+            slug: item.slug,
+            name: item.name,
+            brand: item.brand ?? undefined,
+            price: item.price,
+            imageUrl: item.imageUrl ?? undefined,
+            stock: item.stock,
+          },
+          qty
+        );
         added += 1;
       }
       if (added === 0) {
