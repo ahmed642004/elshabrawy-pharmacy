@@ -28,7 +28,20 @@ export interface Product {
 interface ProductCardProps {
   product: Product;
   className?: string;
+  // Grid layout varies by caller (fixed-width carousel vs. fluid listing
+  // grids with different column counts) — an accurate value here keeps the
+  // image optimizer from serving a bigger srcset entry than the card ever
+  // displays. Defaults to the common 1/2/3-column listing grid.
+  sizes?: string;
+  // Set by the caller for cards that render above the fold, so Next.js
+  // marks the image fetchpriority=high and skips the default lazy-loading.
+  priority?: boolean;
 }
+
+// Matches the no-sidebar 1/2/3-column grid (search results) — the closest
+// fit for a caller that doesn't pass its own layout-accurate value.
+const DEFAULT_SIZES =
+  "(min-width: 1280px) 387px, (min-width: 1024px) calc((100vw - 120px) / 3), (min-width: 768px) calc((100vw - 100px) / 2), calc(100vw - 32px)";
 
 const badgeToneClasses: Record<BadgeTone, string> = {
   sale: "bg-danger-500 text-white",
@@ -42,7 +55,7 @@ const stockToneClasses: Record<StockState, string> = {
   out: "bg-danger-50 text-danger-600",
 };
 
-export default function ProductCard({ product, className = "" }: ProductCardProps) {
+export default function ProductCard({ product, className = "", sizes = DEFAULT_SIZES, priority = false }: ProductCardProps) {
   const { slug, name, brand, sub, price, wasPrice, imageUrl, badge } = product;
   const stock = product.stock ?? "in";
   const outOfStock = stock === "out";
@@ -78,7 +91,13 @@ export default function ProductCard({ product, className = "" }: ProductCardProp
               src={imageUrl}
               alt={name}
               fill
-              sizes="(min-width: 1024px) 300px, (min-width: 768px) 45vw, 90vw"
+              sizes={sizes}
+              preload={priority}
+              // `preload` alone (this Next.js version's replacement for the
+              // deprecated `priority` prop) only removes lazy-loading — it no
+              // longer stamps fetchpriority="high" on the img/preload link,
+              // so LCP candidates need it passed explicitly too.
+              fetchPriority={priority ? "high" : undefined}
               className="object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : (

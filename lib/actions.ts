@@ -1,5 +1,6 @@
 "use server";
 
+import sharp from "sharp";
 import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminSession } from "@/lib/queries";
@@ -579,12 +580,20 @@ function assertValidImage(image: File): void {
   if (image.size > 5 * 1024 * 1024) throw new Error("Image must be under 5MB");
 }
 
-// Extension comes from a user-controlled filename — restrict it to a plain
-// alphanumeric token so it can't smuggle path separators or odd characters
-// into the storage key.
-function safeExtension(filename: string): string {
-  const rawExt = filename.split(".").pop() ?? "";
-  return /^[a-z0-9]{1,8}$/i.test(rawExt) ? rawExt.toLowerCase() : "jpg";
+// Admin-sourced photos are routinely multi-megabyte camera/PNG exports (see
+// the product-images bucket) — far larger than the ~600px this catalog ever
+// displays them at. Every upload is re-encoded through this before it
+// touches storage, so a 4000px 5MB PNG can't reach the bucket unshrunk (the
+// bucket used to accumulate exactly those and even broke the dev optimizer
+// on the category grid). withoutEnlargement means a source already smaller
+// than the cap just gets recompressed, not upscaled.
+async function optimizeImage(image: File): Promise<Buffer> {
+  const bytes = Buffer.from(await image.arrayBuffer());
+  return sharp(bytes)
+    .rotate() // bakes in EXIF orientation before the tag is stripped
+    .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
+    .webp({ quality: 82 })
+    .toBuffer();
 }
 
 // Uploads a validated image to the product-images bucket and points the
@@ -599,9 +608,12 @@ async function setProductThumbnail(
   image: File
 ): Promise<void> {
   assertValidImage(image);
-  const path = `${slug}/${Date.now()}.${safeExtension(image.name)}`;
+  const optimized = await optimizeImage(image);
+  const path = `${slug}/${Date.now()}.webp`;
 
-  const { error: uploadError } = await supabase.storage.from("product-images").upload(path, image);
+  const { error: uploadError } = await supabase.storage
+    .from("product-images")
+    .upload(path, optimized, { contentType: "image/webp" });
   if (uploadError) throw uploadError;
 
   const {
@@ -675,6 +687,37 @@ export async function updateProduct(formData: FormData): Promise<void> {
   revalidatePath("/admin/inventory");
 }
 
+// product_images/reviews/cart_items/notify_requests all cascade on the DB
+// side (migrations 0001, 0013, 0023); order_items only stores a denormalized
+// product_slug snapshot, so past orders are unaffected by the delete.
+export async function deleteProduct(productId: string): Promise<void> {
+  await assertAdmin();
+  const supabase = await createClient();
+
+  const { data: images } = await supabase.from("product_images").select("url").eq("product_id", productId);
+
+  const { error } = await supabase.from("products").delete().eq("id", productId);
+  if (error) throw error;
+
+  // Best-effort: the DB rows are already gone via cascade, so leftover
+  // storage objects are only stray files, not a correctness issue.
+  const paths = (images ?? [])
+    .map((img) => img.url.split("/product-images/")[1])
+    .filter((p): p is string => Boolean(p));
+  if (paths.length > 0) {
+    await supabase.storage
+      .from("product-images")
+      .remove(paths)
+      .catch(() => {});
+  }
+
+  updateTag("products");
+  revalidatePath("/admin");
+  revalidatePath("/admin/inventory");
+  revalidatePath("/category");
+  revalidatePath("/");
+}
+
 // Uploads one or more gallery images for an existing product. If the product
 // has no images yet, the first upload becomes position 0 (the card/carousel
 // thumbnail) so it isn't left without one; otherwise new images append after
@@ -704,8 +747,11 @@ export async function addProductImages(
 
   const inserted: { id: string; url: string; position: number }[] = [];
   for (const file of files) {
-    const path = `${slug}/${Date.now()}-${nextPosition}.${safeExtension(file.name)}`;
-    const { error: uploadError } = await supabase.storage.from("product-images").upload(path, file);
+    const optimized = await optimizeImage(file);
+    const path = `${slug}/${Date.now()}-${nextPosition}.webp`;
+    const { error: uploadError } = await supabase.storage
+      .from("product-images")
+      .upload(path, optimized, { contentType: "image/webp" });
     if (uploadError) throw uploadError;
 
     const {

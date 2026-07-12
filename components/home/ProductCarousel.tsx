@@ -97,9 +97,9 @@ export default function ProductCarousel({ products }: { products: Product[] }) {
           ref={trackRef}
           className="-mx-2 flex snap-x snap-mandatory gap-[18px] overflow-x-auto scroll-smooth px-2 pb-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          {products.map((product) => (
+          {products.map((product, i) => (
             <div key={product.slug} className="w-[200px] shrink-0 snap-start md:w-[240px]">
-              <ProductCard product={product} />
+              <ProductCard product={product} sizes="(min-width: 768px) 240px, 200px" priority={i === 0} />
             </div>
           ))}
         </div>

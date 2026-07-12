@@ -74,7 +74,7 @@ export default function RelatedProducts({ products }: { products: Product[] }) {
       >
         {products.map((product) => (
           <div key={product.slug} className="w-[190px] shrink-0 snap-start md:w-[220px]">
-            <ProductCard product={product} />
+            <ProductCard product={product} sizes="(min-width: 768px) 220px, 190px" />
           </div>
         ))}
       </div>

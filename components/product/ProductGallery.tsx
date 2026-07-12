@@ -54,7 +54,10 @@ export default function ProductGallery({ name, images = [] }: { name: string; im
                 src={activeImage}
                 alt={name}
                 fill
-                priority={activeIndex === 0}
+                preload={activeIndex === 0}
+                // preload alone no longer implies fetchpriority=high on this
+                // Next.js version — see ProductCard.tsx.
+                fetchPriority={activeIndex === 0 ? "high" : undefined}
                 sizes="(min-width: 1280px) 560px, (min-width: 768px) 50vw, 100vw"
                 className="object-cover"
               />

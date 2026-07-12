@@ -217,7 +217,10 @@ export default function Hero({ products = [] }: { products?: Product[] }) {
                         alt=""
                         width={96}
                         height={96}
-                        priority={i === 0}
+                        preload={i === 0}
+                        // preload alone no longer implies fetchpriority=high
+                        // on this Next.js version — see ProductCard.tsx.
+                        fetchPriority={i === 0 ? "high" : undefined}
                         className="h-full w-full rounded-full object-contain"
                       />
                     </span>

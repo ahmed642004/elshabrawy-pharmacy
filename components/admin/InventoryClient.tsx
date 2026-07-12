@@ -2,13 +2,13 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
-import { Search, Plus, Minus, AlertTriangle, Pencil, Pill } from "lucide-react";
+import { Search, Plus, Minus, AlertTriangle, Pencil, Pill, Trash2 } from "lucide-react";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import IconButton from "@/components/ui/IconButton";
 import StockProgressBar from "@/components/admin/StockProgressBar";
 import ProductFormModal from "@/components/admin/ProductFormModal";
-import { adjustProductStock } from "@/lib/actions";
+import { adjustProductStock, deleteProduct } from "@/lib/actions";
 import { formatEGP } from "@/lib/cart-totals";
 import type { AdminInventoryItem, CategoryRow } from "@/lib/queries";
 
@@ -24,6 +24,8 @@ export default function InventoryClient({ inventory, categories }: InventoryClie
   const [addModalOpen, setAddModalOpen] = useState(searchParams.get("add") === "1");
   const [editingItem, setEditingItem] = useState<AdminInventoryItem | null>(null);
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const [deleteErrorId, setDeleteErrorId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   const filtered = useMemo(() => {
@@ -48,6 +50,29 @@ export default function InventoryClient({ inventory, categories }: InventoryClie
         next.delete(id);
         return next;
       });
+    });
+  }
+
+  function handleDeleteClick(id: string) {
+    if (confirmingDeleteId !== id) {
+      setConfirmingDeleteId(id);
+      return;
+    }
+    setConfirmingDeleteId(null);
+    setDeleteErrorId(null);
+    setPendingIds((prev) => new Set(prev).add(id));
+    startTransition(async () => {
+      try {
+        await deleteProduct(id);
+      } catch {
+        setDeleteErrorId(id);
+      } finally {
+        setPendingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
     });
   }
 
@@ -108,7 +133,7 @@ export default function InventoryClient({ inventory, categories }: InventoryClie
 
       <div className="overflow-x-auto rounded-[20px] border border-neutral-200 bg-white shadow-sm">
         <div className="min-w-[800px]">
-        <div className="grid grid-cols-[1.4fr_110px_130px_90px_100px_170px] gap-2 border-b border-neutral-100 px-5 py-3.5 font-label text-[11px] font-semibold tracking-wide text-neutral-400 uppercase">
+        <div className="grid grid-cols-[1.4fr_110px_130px_90px_100px_210px] gap-2 border-b border-neutral-100 px-5 py-3.5 font-label text-[11px] font-semibold tracking-wide text-neutral-400 uppercase">
           <div>Medicine</div>
           <div>Category</div>
           <div>Stock level</div>
@@ -120,9 +145,9 @@ export default function InventoryClient({ inventory, categories }: InventoryClie
           const low = item.stockCount <= item.lowStockThreshold;
           const pending = pendingIds.has(item.id);
           return (
+            <div key={item.id}>
             <div
-              key={item.id}
-              className="grid grid-cols-[1.4fr_110px_130px_90px_100px_170px] items-center gap-2 border-b border-neutral-100 px-5 py-3.5 last:border-0"
+              className="grid grid-cols-[1.4fr_110px_130px_90px_100px_210px] items-center gap-2 border-b border-neutral-100 px-5 py-3.5 last:border-0"
             >
               <div className="flex items-center gap-2.5">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-neutral-100">
@@ -161,7 +186,21 @@ export default function InventoryClient({ inventory, categories }: InventoryClie
                   size="sm"
                   onClick={() => setEditingItem(item)}
                 />
+                <IconButton
+                  icon={Trash2}
+                  tone={confirmingDeleteId === item.id ? "danger" : "neutral"}
+                  aria-label={`Delete ${item.name}`}
+                  size="sm"
+                  disabled={pending}
+                  onClick={() => handleDeleteClick(item.id)}
+                />
               </div>
+            </div>
+            {deleteErrorId === item.id && (
+              <div className="border-b border-neutral-100 bg-danger-50 px-5 py-2 text-xs text-danger-600">
+                Couldn&apos;t delete this item. Please try again.
+              </div>
+            )}
             </div>
           );
         })}

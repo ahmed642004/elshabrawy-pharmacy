@@ -175,7 +175,14 @@ export default function CategoryListingClient({
           {products.length > 0 ? (
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
               {products.map((p) => (
-                <ProductCard key={p.slug} product={p} />
+                <ProductCard
+                  key={p.slug}
+                  product={p}
+                  // Accounts for the fixed 240px sidebar (md:grid-cols-[240px_1fr])
+                  // this grid sits next to — the generic no-sidebar default
+                  // overestimates the card width at every breakpoint here.
+                  sizes="(min-width: 1280px) 300px, (min-width: 1024px) calc((100vw - 392px) / 3), (min-width: 768px) calc((100vw - 372px) / 2), calc(100vw - 32px)"
+                />
               ))}
             </div>
           ) : (
