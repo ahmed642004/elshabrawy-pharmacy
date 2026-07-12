@@ -217,10 +217,12 @@ export default function Hero({ products = [] }: { products?: Product[] }) {
                         alt=""
                         width={96}
                         height={96}
-                        preload={i === 0}
-                        // preload alone no longer implies fetchpriority=high
-                        // on this Next.js version — see ProductCard.tsx.
-                        fetchPriority={i === 0 ? "high" : undefined}
+                        // Deliberately NOT priority: this 96px showcase image is
+                        // hidden on mobile (hidden md:flex) and only ~96px on
+                        // desktop, so it's never the LCP on any viewport. A
+                        // high-priority preload here would just steal bandwidth
+                        // from the real LCP (the first category tiles).
+                        loading={i === 0 ? "eager" : "lazy"}
                         className="h-full w-full rounded-full object-contain"
                       />
                     </span>

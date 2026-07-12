@@ -33,9 +33,14 @@ export default async function CategoryGrid() {
       </div>
 
       <div className="grid grid-cols-2 gap-3.5 md:grid-cols-3 lg:grid-cols-6">
-        {categories.map((category) => {
+        {categories.map((category, index) => {
           const { icon: Icon, tone: toneId } = getCategoryVisual(category.id);
           const tone = toneClasses[toneId];
+          // On mobile the hero has no image, so the first row of category
+          // tiles (2-up) is the largest thing above the fold — i.e. the LCP.
+          // Eager-load + fetchpriority=high those two so the LCP image is
+          // discoverable in the initial HTML instead of lazy-loaded late.
+          const isAboveFold = index < 2;
           return (
             <Link
               key={category.id}
@@ -52,6 +57,10 @@ export default async function CategoryGrid() {
                   // 3-5MB source PNGs that blows past the dev optimizer's
                   // upstream timeout and the image silently never renders.
                   sizes="(min-width: 1024px) 200px, (min-width: 768px) 33vw, 50vw"
+                  preload={isAboveFold}
+                  // preload alone no longer implies fetchpriority=high on this
+                  // Next.js version — see ProductCard.tsx.
+                  fetchPriority={isAboveFold ? "high" : undefined}
                   className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                 />
               ) : (
