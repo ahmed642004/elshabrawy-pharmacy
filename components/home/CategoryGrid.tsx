@@ -36,10 +36,11 @@ export default async function CategoryGrid() {
         {categories.map((category, index) => {
           const { icon: Icon, tone: toneId } = getCategoryVisual(category.id);
           const tone = toneClasses[toneId];
-          // On mobile the hero has no image, so the first row of category
-          // tiles (2-up) is the largest thing above the fold — i.e. the LCP.
-          // Eager-load + fetchpriority=high those two so the LCP image is
-          // discoverable in the initial HTML instead of lazy-loaded late.
+          // All six tiles sit above the fold (one 6-up row on desktop, the top
+          // rows on mobile), and under RTL the browser can treat any of them as
+          // the LCP. The first two (the mobile 2-col first row) get a
+          // high-priority preload; the rest just load eagerly (see below) so
+          // whichever tile becomes the LCP is never lazy-loaded.
           const isAboveFold = index < 2;
           return (
             <Link
@@ -57,6 +58,12 @@ export default async function CategoryGrid() {
                   // 3-5MB source PNGs that blows past the dev optimizer's
                   // upstream timeout and the image silently never renders.
                   sizes="(min-width: 1024px) 200px, (min-width: 768px) 33vw, 50vw"
+                  // Eager (not lazy) on every tile: the lazy default was adding
+                  // ~2s of resource-load-delay to the observed desktop LCP, since
+                  // the browser can pick any of the six as the LCP element. Eager
+                  // != high priority, so the four non-first-row tiles load at
+                  // default priority and don't starve the above-fold content.
+                  loading={isAboveFold ? undefined : "eager"}
                   preload={isAboveFold}
                   // preload alone no longer implies fetchpriority=high on this
                   // Next.js version — see ProductCard.tsx.
