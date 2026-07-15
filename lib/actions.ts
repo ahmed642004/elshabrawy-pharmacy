@@ -587,13 +587,19 @@ function assertValidImage(image: File): void {
 // bucket used to accumulate exactly those and even broke the dev optimizer
 // on the category grid). withoutEnlargement means a source already smaller
 // than the cap just gets recompressed, not upscaled.
-async function optimizeImage(image: File): Promise<Buffer> {
+// Returns a Blob rather than a raw Buffer: supabase-js's upload() sends a
+// Buffer as a bare fetch body, which Next.js's server-side fetch handling
+// corrupts in transit (bytes above 0x7F get mangled, silently producing a
+// broken image in the bucket). Wrapping it as a Blob routes the client
+// through its multipart/form-data upload path instead, which survives intact.
+async function optimizeImage(image: File): Promise<Blob> {
   const bytes = Buffer.from(await image.arrayBuffer());
-  return sharp(bytes)
+  const optimized = await sharp(bytes)
     .rotate() // bakes in EXIF orientation before the tag is stripped
     .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
     .webp({ quality: 82 })
     .toBuffer();
+  return new Blob([optimized], { type: "image/webp" });
 }
 
 // Uploads a validated image to the product-images bucket and points the
